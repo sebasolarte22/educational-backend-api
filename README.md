@@ -7,7 +7,7 @@ secure token management, automated testing, and AI service integration.
 
 ---
 
-##  Features
+## 🚀 Features
 
 - User registration and login
 - JWT authentication with Refresh Token flow
@@ -19,10 +19,11 @@ secure token management, automated testing, and AI service integration.
 - File upload handling with Multer
 - OCR processing with Tesseract.js
 - Unit and integration testing with Jest & Supertest
+- API testing with Postman
 
 ---
 
-##  Architecture Highlights
+## 🏗 Architecture Highlights
 
 - Modular folder structure (routes, services, middlewares)
 - Separation of concerns
@@ -38,7 +39,7 @@ secure token management, automated testing, and AI service integration.
 
 ---
 
-##  Tech Stack
+## 🛠 Tech Stack
 
 - Node.js
 - Express
@@ -52,9 +53,54 @@ secure token management, automated testing, and AI service integration.
 
 ---
 
-##  Installation
+## 📦 Installation
 
 ```bash
 git clone https://github.com/sebasolarte22/educational-backend-api.git
 cd educational-backend-api
 npm install
+```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file in the root directory:
+
+```
+PORT=3000
+
+#JWT Secrets
+JWT_ACCESS_SECRET
+JWT_REFRESH_SECRET
+
+#Expirations
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+#IA
+OPENAI_API_KEY  
+```
+
+---
+
+## 🧪 Run Tests
+
+```bash
+npm test
+```
+
+---
+
+## ▶️ Run Server
+
+```bash
+npm start
+```
+
+---
+
+## 📌 Author
+
+Sebastian Olarte  
+Backend Developer
