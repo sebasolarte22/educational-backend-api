@@ -1,4 +1,3 @@
-// tests/auth.test.js
 require("dotenv").config();
 
 const request = require("supertest");
@@ -11,14 +10,18 @@ describe("AUTH - Login", () => {
   beforeAll(async () => {
     await pool.query(
       `INSERT INTO usuarios (email, password, role)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (email) DO NOTHING`,
+      VALUES ($1, $2, $3)
+      ON CONFLICT (email) DO NOTHING`,
       [
         "sebastian2@test.com",
         await bcrypt.hash("123456", 10),
         "admin"
       ]
     );
+  });
+
+  afterAll(async () => {
+    await pool.end();
   });
 
   test("Login correcto debe devolver un token", async () => {
@@ -42,6 +45,7 @@ describe("AUTH - Login", () => {
       });
 
     expect(res.statusCode).toBe(401);
+    expect(res.body.status).toBe("fail");
   });
 
 });

@@ -1,38 +1,39 @@
 const jwt = require("jsonwebtoken");
+const AppError = require("../utils/AppError");
+const logger = require("../utils/logger");
 
 function authMiddleware(req, res, next) {
-  // 1) Leer el header Authorization
   const authHeader = req.headers.authorization;
 
-  // 2) Validar que exista
   if (!authHeader) {
-    return res.status(401).json({ error: "Token no proporcionado" });
+    throw new AppError("Token no proporcionado", 401);
   }
 
-  // 3) Formato esperado: "Bearer TOKEN"
   const [type, token] = authHeader.split(" ");
 
   if (type !== "Bearer" || !token) {
-    return res.status(401).json({ error: "Formato de token inválido" });
+    throw new AppError("Formato de token inválido", 401);
   }
 
   try {
-    // 4) Verificar token
     const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
-    // 5) Guardar info del usuario en la request
     req.user = payload;
 
-    // 6) Continuar
+    logger.info({
+      event: "AUTH_SUCCESS",
+      userId: payload.id
+    });
+
     next();
   } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ error: "Token expirado" });
-    }
-    return res.status(401).json({ error: "Token inválido" });
+    logger.warn({
+      event: "AUTH_TOKEN_ERROR",
+      message: err.message
+    });
+
+    throw new AppError("Token inválido o expirado", 401);
   }
 }
 
 module.exports = authMiddleware;
-
-

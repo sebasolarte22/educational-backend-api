@@ -1,8 +1,8 @@
 const rateLimit = require("express-rate-limit");
 
 const aiRateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 5, // 5 requests por ventana
+  windowMs: 1 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

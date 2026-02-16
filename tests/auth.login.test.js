@@ -1,16 +1,16 @@
+require("dotenv").config();
+
 const request = require("supertest");
 const app = require("../app");
 const pool = require("../config/db");
 
 describe("POST /api/cursos/auth/login", () => {
 
-  // Usuario de prueba
   const user = {
     email: "login@test.com",
     password: "123456"
   };
 
-  // Antes de todo: crear usuario
   beforeAll(async () => {
     await pool.query(
       "DELETE FROM usuarios WHERE email = $1",
@@ -23,7 +23,6 @@ describe("POST /api/cursos/auth/login", () => {
       .expect(201);
   });
 
-  // Después de todo: limpiar DB
   afterAll(async () => {
     await pool.query(
       "DELETE FROM usuarios WHERE email = $1",
@@ -36,8 +35,6 @@ describe("POST /api/cursos/auth/login", () => {
     const res = await request(app)
       .post("/api/cursos/auth/login")
       .send(user);
-
-    console.log("LOGIN RESPONSE:", res.body);
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty("token");
