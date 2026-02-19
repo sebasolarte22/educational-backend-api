@@ -1,47 +1,35 @@
 const OpenAI = require("openai");
 const pool = require("../config/db");
+const logger = require("../utils/logger");
+const AppError = require("../utils/AppError");
 
 const mode = process.env.AI_MODE || "mock";
 
 let client = null;
 
-// ==========================
-// CLIENTE OPENAI (solo en modo real)
-// ==========================
 if (mode === "real") {
   client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
   });
 }
 
-// ==========================
-// IA MOCK (DESARROLLO / TESTS)
-// ==========================
 async function explicarCursoMock({ titulo, categoria, nivel }) {
   return {
-    descripcion: `Este es un curso de ${titulo}, orientado a personas con nivel ${nivel} en el área de ${categoria}. En este curso aprenderás los fundamentos clave de manera clara y práctica, con ejemplos sencillos y ejercicios aplicados.`
+    descripcion: `Este es un curso de ${titulo}, orientado a personas con nivel ${nivel} en el área de ${categoria}. En este curso aprenderás los fundamentos clave de manera clara y práctica.`
   };
 }
 
-// ==========================
-// IA REAL (OPENAI)
-// ==========================
 async function explicarCursoReal({ titulo, categoria, nivel }) {
   const prompt = `
 Eres un asistente educativo.
 Genera una descripción clara y breve de un curso.
 
-Datos del curso:
+Datos:
 - Título: ${titulo}
 - Categoría: ${categoria}
 - Nivel: ${nivel}
 
-Reglas:
-- Usa lenguaje claro
-- Máximo 3 párrafos
-- No menciones que eres una IA
-- No inventes requisitos
-- No uses emojis
+Máximo 3 párrafos.
 `;
 
   const response = await client.chat.completions.create({
@@ -57,51 +45,47 @@ Reglas:
   const descripcion = response.choices[0]?.message?.content;
 
   if (!descripcion) {
-    throw new Error("Respuesta vacía de la IA");
+    throw new AppError("Respuesta vacía de la IA", 500);
   }
 
   return { descripcion };
 }
 
-// ==========================
-// FUNCIÓN PÚBLICA (CORE)
-// ==========================
 async function explicarCurso(data, userId) {
-  try {
-    console.log("Revisando cache IA");
-    // ==========================
-    // CACHE POR INPUT (solo en real)
-    // ==========================
-    if (mode === "real") {
-      const cached = await pool.query(
-        `SELECT output
-        FROM ai_logs
-        WHERE endpoint = $1
-        AND input = $2
-        AND mode = 'real'
-        ORDER BY created_at DESC
-        LIMIT 1`,
-        ["explicar-curso", JSON.stringify(data)]
-      );
 
-      if (cached.rowCount > 0) {
-        return { descripcion: cached.rows[0].output };
-        console.log("✅ RESPUESTA DESDE CACHE (sin IA)");
-      }
+  logger.info({
+    event: "AI_REQUEST",
+    userId,
+    mode
+  });
+
+  if (mode === "real") {
+    const cached = await pool.query(
+      `SELECT output FROM ai_logs
+      WHERE endpoint = $1
+      AND input = $2
+      AND mode = 'real'
+      ORDER BY created_at DESC
+      LIMIT 1`,
+      ["explicar-curso", JSON.stringify(data)]
+    );
+
+    if (cached.rowCount > 0) {
+      logger.info({
+        event: "AI_CACHE_HIT",
+        userId
+      });
+
+      return { descripcion: cached.rows[0].output };
     }
+  }
 
-    // ==========================
-    // EJECUTAR IA (real o mock)
-    // ==========================
-    console.log("🚀 LLAMANDO IA REAL");
+  try {
     const result =
       mode === "real"
         ? await explicarCursoReal(data)
         : await explicarCursoMock(data);
 
-    // ==========================
-    // GUARDAR HISTORIAL EN DB
-    // ==========================
     await pool.query(
       `INSERT INTO ai_logs (user_id, endpoint, input, output, mode)
       VALUES ($1, $2, $3, $4, $5)`,
@@ -114,11 +98,21 @@ async function explicarCurso(data, userId) {
       ]
     );
 
+    logger.info({
+      event: "AI_RESPONSE_SAVED",
+      userId
+    });
+
     return result;
 
   } catch (err) {
-    console.error("ERROR IA:", err.message);
-    throw new Error("No se pudo generar la descripción");
+    logger.error({
+      event: "AI_ERROR",
+      message: err.message,
+      stack: err.stack
+    });
+
+    throw new AppError("No se pudo generar la descripción", 500);
   }
 }
 

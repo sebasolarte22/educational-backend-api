@@ -1,14 +1,14 @@
 const { Pool } = require("pg");
 
-const pool = new Pool({
-  host: "localhost",
-  user: "sebastianolarte",
-  database: "postgres",
-  port: 5432,
+const isTest = process.env.NODE_ENV === "test";
 
-  // 🔑 IMPORTANTE para Jest
-  idleTimeoutMillis: 1,
-  connectionTimeoutMillis: 0
+const connectionString = isTest
+  ? process.env.DATABASE_URL_TEST
+  : process.env.DATABASE_URL;
+
+const pool = new Pool({
+  connectionString,
+  idleTimeoutMillis: isTest ? 1 : 10000
 });
 
 module.exports = pool;
