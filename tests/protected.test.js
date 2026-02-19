@@ -31,6 +31,13 @@ describe("Rutas protegidas con JWT", () => {
     token = res.body.token;
   });
 
+  // ⭐ LIMPIEZA DESPUÉS DE CADA TEST
+  afterEach(async () => {
+    await pool.query(
+      "DELETE FROM cursos WHERE titulo LIKE 'Curso%'"
+    );
+  });
+
   afterAll(async () => {
     await pool.end();
   });

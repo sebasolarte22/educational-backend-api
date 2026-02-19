@@ -26,7 +26,6 @@ app.use("/api/cursos/programacion", require("./routers/programacion"));
 app.use("/api/cursos/matematicas", require("./routers/matematicas"));
 app.use("/api/cursos/auth", require("./routers/auth"));
 app.use("/api/ai", require("./routers/ai"));
-app.use("/api/users", require("./routers/users"));
 
 // Root
 app.get("/", (req, res) => {

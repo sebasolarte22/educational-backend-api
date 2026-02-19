@@ -39,8 +39,19 @@ describe("Roles: admin vs user", () => {
     userToken = userRes.body.token;
   });
 
+  // ⭐ LIMPIAR CURSOS CREADOS POR TESTS
+  afterEach(async () => {
+    await pool.query(
+      "DELETE FROM cursos WHERE titulo LIKE 'Curso%'"
+    );
+  });
+
+  // ⭐ NO cerrar pool aquí
   afterAll(async () => {
-    await pool.end();
+    await pool.query(
+      "DELETE FROM usuarios WHERE email IN ($1,$2)",
+      ["user@test.com", "admin@test.com"]
+    );
   });
 
   test("USER puede crear curso", async () => {

@@ -4,6 +4,13 @@ const request = require("supertest");
 const app = require("../app");
 const pool = require("../config/db");
 
+// ⭐ MOCK AI SERVICE
+jest.mock("../services/aiService", () => ({
+  explicarCurso: jest.fn().mockResolvedValue({
+    descripcion: "Curso explicado por IA (mock)"
+  })
+}));
+
 describe("POST /api/ai/explicar-curso", () => {
 
   let adminToken;
@@ -12,7 +19,7 @@ describe("POST /api/ai/explicar-curso", () => {
   beforeAll(async () => {
 
     await pool.query(
-      "DELETE FROM usuarios WHERE email IN ($1, $2)",
+      "DELETE FROM usuarios WHERE email IN ($1,$2)",
       ["admin_ia@test.com", "user_ia@test.com"]
     );
 
@@ -56,10 +63,9 @@ describe("POST /api/ai/explicar-curso", () => {
 
   afterAll(async () => {
     await pool.query(
-      "DELETE FROM usuarios WHERE email IN ($1, $2)",
+      "DELETE FROM usuarios WHERE email IN ($1,$2)",
       ["admin_ia@test.com", "user_ia@test.com"]
     );
-    await pool.end();
   });
 
   test("rechaza acceso sin token", async () => {
@@ -68,7 +74,7 @@ describe("POST /api/ai/explicar-curso", () => {
       .send({});
 
     expect(res.statusCode).toBe(401);
-    expect(res.body.status).toBe("fail");
+    expect(res.body.success).toBe(false);
   });
 
   test("rechaza usuario sin rol permitido", async () => {
@@ -76,13 +82,13 @@ describe("POST /api/ai/explicar-curso", () => {
       .post("/api/ai/explicar-curso")
       .set("Authorization", `Bearer ${userToken}`)
       .send({
-        titulo: "Curso de JavaScript",
+        titulo: "Curso JS",
         categoria: "programacion",
         nivel: "basico"
       });
 
     expect(res.statusCode).toBe(403);
-    expect(res.body.status).toBe("fail");
+    expect(res.body.success).toBe(false);
   });
 
   test("admin puede usar IA (mock)", async () => {
@@ -90,7 +96,7 @@ describe("POST /api/ai/explicar-curso", () => {
       .post("/api/ai/explicar-curso")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        titulo: "Curso de JavaScript",
+        titulo: "Curso JS",
         categoria: "programacion",
         nivel: "basico"
       });
@@ -98,6 +104,7 @@ describe("POST /api/ai/explicar-curso", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty("descripcion");
+    expect(typeof res.body.data.descripcion).toBe("string");
   });
 
 });
