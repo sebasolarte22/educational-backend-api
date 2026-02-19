@@ -45,6 +45,20 @@ This project demonstrates secure authentication, role-based authorization, refre
 
 ---
 
+## 📁 Project Structure
+
+```
+controllers/
+services/
+middlewares/
+routers/
+utils/
+config/
+tests/
+```
+
+---
+
 ## 🛠 Tech Stack
 
 - Node.js
@@ -65,4 +79,82 @@ This project demonstrates secure authentication, role-based authorization, refre
 git clone https://github.com/sebasolarte22/educational-backend-api.git
 cd educational-backend-api
 npm install
+```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file:
+
+```
+PORT=3000
+
+# Database (DEV)
+DB_HOST
+DB_USER
+DB_NAME
+DB_PORT
+
+# JWT
+JWT_ACCESS_SECRET
+JWT_REFRESH_SECRET
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# AI
+OPENAI_API_KEY
+
+# Testing DB
+DB_NAME_TEST=cursos_test
+```
+
+---
+
+## 🧪 Testing
+
+Tests run against a **separate test database** to avoid affecting development data.
+
+Run tests:
+
+```bash
+npm test
+```
+
+---
+
+## ▶️ Run Server
+
+```bash
+npm start
+```
+
+---
+
+## 📚 Example API Modules
+
+- Auth (register, login, refresh, logout)
+- Courses (programming & mathematics)
+- AI (course explanation endpoint)
+
+---
+
+## 🧠 What This Project Demonstrates
+
+This repository focuses on **real backend engineering practices**:
+
+- Token rotation strategy
+- Secure refresh token storage (hashed)
+- Clean architecture structure
+- External service mocking (AI)
+- Production logging patterns
+- Integration testing with database isolation
+
+---
+
+## 👨‍💻 Author
+
+**Sebastian Olarte**  
+Backend Developer
+
 
