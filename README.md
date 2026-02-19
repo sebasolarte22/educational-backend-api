@@ -1,41 +1,47 @@
 # Educational Backend API
 
-Production-ready REST API built with Node.js and Express.
+Production-ready REST API built with **Node.js, Express and PostgreSQL** following a clean architecture approach.
 
-This project demonstrates authentication, role-based access control,
-secure token management, automated testing, and AI service integration.
+This project demonstrates secure authentication, role-based authorization, refresh token rotation, AI service integration, structured logging, and full integration testing with an isolated test database.
 
 ---
 
 ## 🚀 Features
 
 - User registration and login
-- JWT authentication with Refresh Token flow
+- JWT authentication with **Access + Refresh Token rotation**
 - Role-based access control (Admin / User)
-- Rate limiting for API protection
-- Secure password hashing with bcrypt
-- PostgreSQL database (raw SQL, no ORM)
-- AI service integration for automated course explanations
-- File upload handling with Multer
-- OCR processing with Tesseract.js
-- Unit and integration testing with Jest & Supertest
-- API testing with Postman
+- AI endpoint with role protection and rate limiting
+- PostgreSQL with raw SQL (no ORM)
+- Clean architecture (controllers → services → middlewares)
+- Centralized error handling with custom AppError
+- Structured logging using Winston
+- Environment-based configuration (dev / test)
+- Automated integration tests with isolated test DB
+- AI service mocked in tests (production-safe pattern)
 
 ---
 
 ## 🏗 Architecture Highlights
 
-- Modular folder structure (routes, services, middlewares)
 - Separation of concerns
-- Environment-based configuration
-- Centralized error handling
-- Token rotation strategy
-- Test coverage for:
-  - Authentication
-  - Role validation
-  - Refresh token logic
-  - Protected routes
-  - AI integration
+- Controllers layer
+- Service layer
+- Middlewares (auth, roles, rate limit, error handler)
+- Global async error wrapper
+- Token hashing for refresh tokens
+- Secure cookie strategy
+- Database isolation for tests
+- Production-ready logging strategy
+
+### Covered Test Scenarios
+
+- Authentication flow
+- Refresh token rotation
+- Protected routes
+- Role validation
+- AI endpoint authorization
+- Course CRUD operations
 
 ---
 
@@ -47,9 +53,9 @@ secure token management, automated testing, and AI service integration.
 - JWT
 - Jest
 - Supertest
-- OpenAI API
-- Multer
-- Tesseract.js
+- Winston (logging)
+- OpenAI API (service layer)
+- Bcrypt
 
 ---
 
@@ -59,48 +65,4 @@ secure token management, automated testing, and AI service integration.
 git clone https://github.com/sebasolarte22/educational-backend-api.git
 cd educational-backend-api
 npm install
-```
 
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file in the root directory:
-
-```
-PORT=3000
-
-#JWT Secrets
-JWT_ACCESS_SECRET
-JWT_REFRESH_SECRET
-
-#Expirations
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-
-#IA
-OPENAI_API_KEY  
-```
-
----
-
-## 🧪 Run Tests
-
-```bash
-npm test
-```
-
----
-
-## ▶️ Run Server
-
-```bash
-npm start
-```
-
----
-
-## 📌 Author
-
-Sebastian Olarte  
-Backend Developer
