@@ -1,8 +1,8 @@
 # Educational Backend API
 
-Production-ready REST API built with **Node.js, Express, PostgreSQL and Redis** following a clean architecture approach.
+Production-ready REST API built with **Node.js, Express, PostgreSQL, Redis and Docker** following a clean architecture approach.
 
-This project demonstrates secure authentication, role-based authorization, refresh token rotation, Redis caching, AI service integration, structured logging, Dockerized infrastructure, and full integration testing with an isolated test database.
+This project demonstrates secure authentication, role-based authorization, refresh token rotation, Redis caching, Dockerized infrastructure, structured logging, and full integration testing with an isolated test database.
 
 ---
 
@@ -18,10 +18,8 @@ This project demonstrates secure authentication, role-based authorization, refre
 * Clean architecture (controllers → services → infrastructure)
 * Centralized error handling with custom AppError
 * Structured logging using Winston
-* Environment-based configuration (dev / test)
 * Automated integration tests with isolated test DB
-* AI service mocked in tests (production-safe pattern)
-* Dockerized infrastructure (Redis)
+* Docker multi-service environment (Backend + Postgres + Redis)
 
 ---
 
@@ -33,18 +31,15 @@ This project demonstrates secure authentication, role-based authorization, refre
 * Infrastructure layer (DB, Redis)
 * Cache-aside pattern implementation
 * Cache invalidation on mutations
-* Middlewares (auth, roles, rate limit, error handler)
-* Global async error wrapper
-* Token hashing for refresh tokens
-* Secure cookie strategy
-* Database isolation for tests
 * Production-ready logging strategy
+* Infrastructure abstraction
+* Environment-based configuration
 
 ---
 
 ## ⚡ Redis Caching Strategy
 
-This project implements **cache-aside pattern**:
+Implements **cache-aside pattern**:
 
 * Cache course list
 * Cache course by id
@@ -55,19 +50,37 @@ Benefits:
 
 * Reduced DB load
 * Faster responses
-* Scalable backend design
+* Scalable backend architecture
 
 ---
 
-## 🐳 Docker Usage
+## 🐳 Docker Setup
 
-Redis runs inside a Docker container to ensure:
+The application runs using **Docker Compose**:
 
-* Environment reproducibility
-* Production-like setup
-* Infrastructure isolation
+Services:
 
-The backend connects to Redis using environment variables, allowing the same configuration locally and in cloud deployments.
+* Backend (Node.js API)
+* PostgreSQL database
+* Redis cache
+
+This ensures:
+
+* Reproducible environments
+* Production-like local setup
+* Clean infrastructure isolation
+
+Run everything:
+
+```bash
+docker compose up --build
+```
+
+Stop:
+
+```bash
+docker compose down
+```
 
 ---
 
@@ -83,6 +96,8 @@ routers/
 utils/
 config/
 tests/
+docker-compose.yml
+Dockerfile
 ```
 
 ---
@@ -97,52 +112,23 @@ tests/
 * Jest
 * Supertest
 * Winston (logging)
-* OpenAI API (service layer)
-* Bcrypt
+* OpenAI API
 * Docker
-
----
-
-## 📦 Installation
-
-```bash
-git clone https://github.com/sebasolarte22/educational-backend-api.git
-cd educational-backend-api
-npm install
-```
 
 ---
 
 ## 🔐 Environment Variables
 
-Create a `.env` file:
-
-```
+```env
 PORT=3000
 
-# Database
 DATABASE_URL=
 DATABASE_URL_TEST=
 
-# JWT
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# AI
-OPENAI_API_KEY=
-```
-
----
-
-## 🐳 Run Redis (Docker)
-
-```bash
-docker run -d -p 6379:6379 --name redis-dev redis:7
+REDIS_URL=redis://redis:6379
 ```
 
 ---
@@ -157,36 +143,19 @@ npm test
 
 ---
 
-## ▶️ Run Server
-
-```bash
-npm start
-```
-
----
-
-## 📚 Example API Modules
-
-* Auth (register, login, refresh, logout)
-* Courses (programming & mathematics unified domain)
-* AI (course explanation endpoint)
-
----
-
 ## 🧠 What This Project Demonstrates
 
-This repository focuses on **real backend engineering practices**:
+Real backend engineering practices:
 
 * Token rotation strategy
-* Secure refresh token storage (hashed)
-* Clean architecture structure
+* Secure refresh token storage
+* Clean architecture
 * Redis caching strategy
 * Cache invalidation strategy
+* Docker multi-service setup
 * Infrastructure abstraction
-* External service mocking (AI)
 * Production logging patterns
-* Integration testing with database isolation
-* Docker-based infrastructure usage
+* Integration testing with DB isolation
 
 ---
 
@@ -194,5 +163,4 @@ This repository focuses on **real backend engineering practices**:
 
 Sebastian Olarte
 Backend Developer
-
 
