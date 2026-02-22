@@ -6,7 +6,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "start": "node app.js"
   },
   "keywords": [],
   "author": "Sebastian Olarte",

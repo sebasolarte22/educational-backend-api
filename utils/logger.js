@@ -3,7 +3,7 @@ const { createLogger, format, transports } = require("winston");
 const isTest = process.env.NODE_ENV === "test";
 
 const logger = createLogger({
-  level: "http",
+  level: process.env.LOG_LEVEL || "http",
   format: format.combine(
     format.timestamp(),
     format.errors({ stack: true }),

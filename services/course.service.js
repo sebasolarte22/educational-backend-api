@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const cache = require("../infrastructure/redis/cacheRepository");
+const logger = require("../utils/logger");
 
 // ==========================
 // GET LIST (CON CACHE)
@@ -11,11 +12,17 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
   const cached = await cache.get(cacheKey);
 
   if (cached) {
-    console.log("🟢 CACHE HIT", cacheKey);
+    logger.debug({
+      event: "CACHE_HIT",
+      cacheKey
+    });
     return cached;
   }
 
-  console.log("🔴 CACHE MISS", cacheKey);
+  logger.debug({
+    event: "CACHE_MISS",
+    cacheKey
+  });
 
   let query = `SELECT * FROM cursos WHERE categoria=$1`;
   const params = [categoria];
@@ -54,12 +61,19 @@ async function getCursoById({ id, categoria }) {
   const cacheKey = `course:${categoria}:${id}`;
 
   const cached = await cache.get(cacheKey);
+
   if (cached) {
-    console.log("🟢 CACHE HIT ID", cacheKey);
+    logger.debug({
+      event: "CACHE_HIT_ID",
+      cacheKey
+    });
     return cached;
   }
 
-  console.log("🔴 CACHE MISS ID", cacheKey);
+  logger.debug({
+    event: "CACHE_MISS_ID",
+    cacheKey
+  });
 
   const result = await pool.query(
     `SELECT * FROM cursos WHERE id=$1 AND categoria=$2`,
@@ -90,8 +104,12 @@ async function createCurso(data) {
     [titulo, categoria, data[field], vistas || 0, nivel, created_by]
   );
 
-  // ⭐ invalidación profesional
   await cache.delByPattern(`courses:${categoria}:*`);
+
+  logger.debug({
+    event: "CACHE_INVALIDATION_LIST",
+    categoria
+  });
 
   return result.rows[0];
 }
@@ -104,9 +122,9 @@ async function updateCurso({ id, categoria, data }) {
 
   const result = await pool.query(
     `UPDATE cursos
-     SET titulo=$1, ${field}=$2, vistas=$3, nivel=$4
-     WHERE id=$5 AND categoria=$6
-     RETURNING *`,
+    SET titulo=$1, ${field}=$2, vistas=$3, nivel=$4
+    WHERE id=$5 AND categoria=$6
+    RETURNING *`,
     [data.titulo, data[field], data.vistas || 0, data.nivel, id, categoria]
   );
 
@@ -115,6 +133,12 @@ async function updateCurso({ id, categoria, data }) {
   if (curso) {
     await cache.del(`course:${categoria}:${id}`);
     await cache.delByPattern(`courses:${categoria}:*`);
+
+    logger.debug({
+      event: "CACHE_INVALIDATION_UPDATE",
+      id,
+      categoria
+    });
   }
 
   return curso;
@@ -136,6 +160,12 @@ async function deleteCurso({ id, categoria }) {
   if (curso) {
     await cache.del(`course:${categoria}:${id}`);
     await cache.delByPattern(`courses:${categoria}:*`);
+
+    logger.debug({
+      event: "CACHE_INVALIDATION_DELETE",
+      id,
+      categoria
+    });
   }
 
   return curso;
