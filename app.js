@@ -4,6 +4,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const logger = require("./utils/logger");
 const errorHandler = require("./middlewares/errorHandler");
+const { connectRedis } = require("./infrastructure/redis/redisClient");
 
 const app = express();
 
@@ -38,12 +39,17 @@ app.use(errorHandler);
 const puerto = process.env.PORT || 3000;
 
 if (require.main === module) {
-  app.listen(puerto, () => {
-    logger.info({
-      event: "SERVER_STARTED",
-      port: puerto
+  (async () => {
+    await connectRedis();
+
+    app.listen(puerto, () => {
+      logger.info({
+        event: "SERVER_STARTED",
+        port: puerto
+      });
     });
-  });
+  })();
 }
+
 
 module.exports = app;
