@@ -12,17 +12,11 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
   const cached = await cache.get(cacheKey);
 
   if (cached) {
-    logger.debug({
-      event: "CACHE_HIT",
-      cacheKey
-    });
+    logger.debug({ event: "CACHE_HIT", cacheKey });
     return cached;
   }
 
-  logger.debug({
-    event: "CACHE_MISS",
-    cacheKey
-  });
+  logger.debug({ event: "CACHE_MISS", cacheKey });
 
   let query = `SELECT * FROM cursos WHERE categoria=$1`;
   const params = [categoria];
@@ -54,7 +48,7 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
 }
 
 // ==========================
-// GET BY ID (CON CACHE)
+// GET BY ID
 // ==========================
 async function getCursoById({ id, categoria }) {
 
@@ -63,17 +57,11 @@ async function getCursoById({ id, categoria }) {
   const cached = await cache.get(cacheKey);
 
   if (cached) {
-    logger.debug({
-      event: "CACHE_HIT_ID",
-      cacheKey
-    });
+    logger.debug({ event: "CACHE_HIT_ID", cacheKey });
     return cached;
   }
 
-  logger.debug({
-    event: "CACHE_MISS_ID",
-    cacheKey
-  });
+  logger.debug({ event: "CACHE_MISS_ID", cacheKey });
 
   const result = await pool.query(
     `SELECT * FROM cursos WHERE id=$1 AND categoria=$2`,
@@ -90,7 +78,7 @@ async function getCursoById({ id, categoria }) {
 }
 
 // ==========================
-// CREATE (INVALIDA LISTAS)
+// CREATE
 // ==========================
 async function createCurso(data) {
   const { titulo, categoria, nivel, vistas, created_by } = data;
@@ -106,16 +94,13 @@ async function createCurso(data) {
 
   await cache.delByPattern(`courses:${categoria}:*`);
 
-  logger.debug({
-    event: "CACHE_INVALIDATION_LIST",
-    categoria
-  });
+  logger.debug({ event: "CACHE_INVALIDATION_LIST", categoria });
 
   return result.rows[0];
 }
 
 // ==========================
-// UPDATE
+// UPDATE (PUT)
 // ==========================
 async function updateCurso({ id, categoria, data }) {
   const field = categoria === "programacion" ? "lenguaje" : "materia";
@@ -134,8 +119,54 @@ async function updateCurso({ id, categoria, data }) {
     await cache.del(`course:${categoria}:${id}`);
     await cache.delByPattern(`courses:${categoria}:*`);
 
+    logger.debug({ event: "CACHE_INVALIDATION_UPDATE", id, categoria });
+  }
+
+  return curso;
+}
+
+// ==========================
+// PATCH 
+// ==========================
+async function patchCurso({ id, categoria, data }) {
+
+  const allowedFields = ["titulo", "nivel", "vistas", "lenguaje", "materia"];
+
+  const updates = [];
+  const params = [];
+  let i = 1;
+
+  for (const key of Object.keys(data)) {
+    if (allowedFields.includes(key) && data[key] !== undefined) {
+      updates.push(`${key}=$${i++}`);
+      params.push(data[key]);
+    }
+  }
+
+  if (updates.length === 0) {
+    return null;
+  }
+
+  params.push(id);
+  params.push(categoria);
+
+  const query = `
+    UPDATE cursos
+    SET ${updates.join(", ")}
+    WHERE id=$${i++} AND categoria=$${i}
+    RETURNING *
+  `;
+
+  const result = await pool.query(query, params);
+
+  const curso = result.rows[0] || null;
+
+  if (curso) {
+    await cache.del(`course:${categoria}:${id}`);
+    await cache.delByPattern(`courses:${categoria}:*`);
+
     logger.debug({
-      event: "CACHE_INVALIDATION_UPDATE",
+      event: "CACHE_INVALIDATION_PATCH",
       id,
       categoria
     });
@@ -161,11 +192,7 @@ async function deleteCurso({ id, categoria }) {
     await cache.del(`course:${categoria}:${id}`);
     await cache.delByPattern(`courses:${categoria}:*`);
 
-    logger.debug({
-      event: "CACHE_INVALIDATION_DELETE",
-      id,
-      categoria
-    });
+    logger.debug({ event: "CACHE_INVALIDATION_DELETE", id, categoria });
   }
 
   return curso;
@@ -176,5 +203,6 @@ module.exports = {
   getCursoById,
   createCurso,
   updateCurso,
+  patchCurso, 
   deleteCurso
 };

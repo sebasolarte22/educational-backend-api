@@ -1,14 +1,12 @@
 const asyncHandler = require("../middlewares/asyncHandler");
 const AppError = require("../utils/AppError");
-const logger = require("../utils/logger");
 const courseService = require("../services/course.service");
 
 // ==========================
 // PROGRAMACION
 // ==========================
 
-// GET
-
+// GET LIST
 const getProgramacion = asyncHandler(async (req, res) => {
   const { lenguaje, nivel, ordenar, page, limit } = req.query;
 
@@ -24,7 +22,6 @@ const getProgramacion = asyncHandler(async (req, res) => {
 });
 
 // GET BY ID
-
 const getProgramacionById = asyncHandler(async (req, res) => {
   const curso = await courseService.getCursoById({
     id: req.params.id,
@@ -36,8 +33,7 @@ const getProgramacionById = asyncHandler(async (req, res) => {
   res.json(curso);
 });
 
-// POST
-
+// CREATE
 const createProgramacion = asyncHandler(async (req, res) => {
   const curso = await courseService.createCurso({
     ...req.body,
@@ -48,8 +44,7 @@ const createProgramacion = asyncHandler(async (req, res) => {
   res.status(201).json(curso);
 });
 
-// PUT 
-
+// PUT (reemplazo completo)
 const updateProgramacion = asyncHandler(async (req, res) => {
   const curso = await courseService.updateCurso({
     id: req.params.id,
@@ -63,7 +58,6 @@ const updateProgramacion = asyncHandler(async (req, res) => {
 });
 
 // DELETE
-
 const deleteProgramacion = asyncHandler(async (req, res) => {
   const curso = await courseService.deleteCurso({
     id: req.params.id,
@@ -79,8 +73,7 @@ const deleteProgramacion = asyncHandler(async (req, res) => {
 // MATEMATICAS
 // ==========================
 
-// GET
-
+// GET LIST
 const getMatematicas = asyncHandler(async (req, res) => {
   const { materia, nivel, ordenar, page, limit } = req.query;
 
@@ -96,7 +89,6 @@ const getMatematicas = asyncHandler(async (req, res) => {
 });
 
 // GET BY ID
-
 const getMatematicasById = asyncHandler(async (req, res) => {
   const curso = await courseService.getCursoById({
     id: req.params.id,
@@ -108,8 +100,7 @@ const getMatematicasById = asyncHandler(async (req, res) => {
   res.json(curso);
 });
 
-// POST
-
+// CREATE
 const createMatematicas = asyncHandler(async (req, res) => {
   const curso = await courseService.createCurso({
     ...req.body,
@@ -120,6 +111,7 @@ const createMatematicas = asyncHandler(async (req, res) => {
   res.status(201).json(curso);
 });
 
+// PUT
 const updateMatematicas = asyncHandler(async (req, res) => {
   const curso = await courseService.updateCurso({
     id: req.params.id,
@@ -133,7 +125,6 @@ const updateMatematicas = asyncHandler(async (req, res) => {
 });
 
 // DELETE
-
 const deleteMatematicas = asyncHandler(async (req, res) => {
   const curso = await courseService.deleteCurso({
     id: req.params.id,
@@ -145,11 +136,18 @@ const deleteMatematicas = asyncHandler(async (req, res) => {
   res.json(curso);
 });
 
-// PATCH GENÉRICO
+// ==========================
+// PATCH 
+// ==========================
 const patchCurso = asyncHandler(async (req, res) => {
-  const curso = await courseService.updateCurso({
+  const categoria =
+    req.originalUrl.includes("programacion")
+      ? "programacion"
+      : "matematicas";
+
+  const curso = await courseService.patchCurso({
     id: req.params.id,
-    categoria: req.body.categoria,
+    categoria,
     data: req.body
   });
 
