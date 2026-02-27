@@ -21,7 +21,7 @@ services:
     image: postgres:15
     container_name: educational-postgres
     environment:
-      POSTGRES_DB: cursos
+      POSTGRES_DB: api_courses
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:

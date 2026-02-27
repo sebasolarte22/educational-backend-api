@@ -13,15 +13,14 @@ exports.register = asyncHandler(async (req, res) => {
 // LOGIN
 //
 exports.login = asyncHandler(async (req, res) => {
-  const { token, refreshToken } = await authService.login(req.body);
+  const { accessToken, refreshToken } = await authService.login(req.body);
 
-  // refresh en cookie segura
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "lax"
   });
 
-  res.json({ token });
+  res.json({ token: accessToken }); // ⭐ FIX
 });
 
 //
@@ -30,14 +29,14 @@ exports.login = asyncHandler(async (req, res) => {
 exports.refresh = asyncHandler(async (req, res) => {
   const old = req.cookies.refreshToken;
 
-  const { token, refreshToken } = await authService.refresh(old);
+  const { accessToken, refreshToken } = await authService.refresh(old);
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "lax"
   });
 
-  res.json({ token });
+  res.json({ token: accessToken }); // ⭐ FIX
 });
 
 //

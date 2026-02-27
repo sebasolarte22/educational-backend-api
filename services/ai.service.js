@@ -1,111 +1,113 @@
-require("dotenv").config();
-
-const request = require("supertest");
-const app = require("../app");
+const OpenAI = require("openai");
 const pool = require("../config/db");
+const logger = require("../utils/logger");
+const AppError = require("../utils/AppError");
 
-// ⭐ MOCK AI SERVICE
-jest.mock("../services/ai.service", () => ({
-  explainCourse: jest.fn().mockResolvedValue({
-    description: "AI generated description (mock)"
-  })
-}));
+const mode = process.env.AI_MODE || "mock";
 
-describe("POST /api/ai/explain-course", () => {
+let client = null;
 
-  let adminToken;
-  let userToken;
+if (mode === "real" && process.env.OPENAI_API_KEY) {
+  client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+}
 
-  beforeAll(async () => {
+//
+// MOCK
+//
+async function explainCourseMock({ title, category, level }) {
+  return {
+    description: `This is a ${title} course designed for ${level} level students in the ${category} area. You will learn key fundamentals in a clear and practical way.`
+  };
+}
 
+//
+// REAL 
+//
+async function explainCourseReal({ title, category, level }) {
+  if (!client) {
+    throw new AppError("OpenAI client not configured", 500);
+  }
+
+  const prompt = `
+You are an educational assistant.
+Generate a clear short description of a course.
+
+Data:
+- Title: ${title}
+- Category: ${category}
+- Level: ${level}
+
+Maximum 3 paragraphs.
+`;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "You are a professional educational assistant." },
+      { role: "user", content: prompt }
+    ],
+    temperature: 0.5,
+    max_tokens: 300
+  });
+
+  const description = response.choices?.[0]?.message?.content;
+
+  if (!description) {
+    throw new AppError("Empty AI response", 500);
+  }
+
+  return { description };
+}
+
+//
+// MAIN SERVICE
+//
+async function explainCourse(data, userId) {
+  logger.info({
+    event: "AI_REQUEST",
+    userId,
+    mode
+  });
+
+  try {
+    const result =
+      mode === "real"
+        ? await explainCourseReal(data)
+        : await explainCourseMock(data);
+
+    // Save log
     await pool.query(
-      "DELETE FROM users WHERE email IN ($1,$2)",
-      ["admin_ai@test.com", "user_ai@test.com"]
+      `INSERT INTO ai_logs (user_id, endpoint, input_data, output_data, mode)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        userId,
+        "explain-course",
+        JSON.stringify(data),
+        result.description,
+        mode
+      ]
     );
 
-    // register user
-    await request(app)
-      .post("/api/courses/auth/register")
-      .send({
-        email: "user_ai@test.com",
-        password: "123456"
-      });
+    logger.info({
+      event: "AI_RESPONSE_SAVED",
+      userId
+    });
 
-    // register admin
-    await request(app)
-      .post("/api/courses/auth/register")
-      .send({
-        email: "admin_ai@test.com",
-        password: "123456"
-      });
+    return result;
 
-    // make admin
-    await pool.query(
-      "UPDATE users SET role='admin' WHERE email=$1",
-      ["admin_ai@test.com"]
-    );
+  } catch (err) {
+    logger.error({
+      event: "AI_ERROR",
+      message: err.message,
+      stack: err.stack
+    });
 
-    // login user
-    const userLogin = await request(app)
-      .post("/api/courses/auth/login")
-      .send({
-        email: "user_ai@test.com",
-        password: "123456"
-      });
+    throw new AppError("Could not generate description", 500);
+  }
+}
 
-    userToken = userLogin.body.token;
-
-    // login admin
-    const adminLogin = await request(app)
-      .post("/api/courses/auth/login")
-      .send({
-        email: "admin_ai@test.com",
-        password: "123456"
-      });
-
-    adminToken = adminLogin.body.token;
-  });
-
-  afterAll(async () => {
-    await pool.query(
-      "DELETE FROM users WHERE email IN ($1,$2)",
-      ["admin_ai@test.com", "user_ai@test.com"]
-    );
-  });
-
-  test("rejects without token", async () => {
-    const res = await request(app)
-      .post("/api/ai/explain-course")
-      .send({});
-
-    expect(res.statusCode).toBe(401);
-  });
-
-  test("rejects user without role", async () => {
-    const res = await request(app)
-      .post("/api/ai/explain-course")
-      .set("Authorization", `Bearer ${userToken}`)
-      .send({
-        title: "JS Course",
-        category: "programming",
-        level: "basic"
-      });
-
-    expect(res.statusCode).toBe(403);
-  });
-
-  test("admin can use AI", async () => {
-    const res = await request(app)
-      .post("/api/ai/explain-course")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        title: "JS Course",
-        category: "programming",
-        level: "basic"
-      });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.data).toHaveProperty("description");
-  });
-
-});
+module.exports = {
+  explainCourse
+};

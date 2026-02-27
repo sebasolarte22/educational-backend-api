@@ -20,7 +20,7 @@ CREATE TABLE refresh_tokens (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- =====================
+-- =====================x
 -- COURSES 
 -- =====================
 CREATE TABLE courses (
