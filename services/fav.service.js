@@ -1,19 +1,6 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 
-// ADD FAVORITE
-async function addFavorite(userId, courseId) {
-  const result = await pool.query(
-    `INSERT INTO favorites (user_id, course_id)
-    VALUES ($1,$2)
-    ON CONFLICT (user_id, course_id) DO NOTHING
-    RETURNING *`,
-    [userId, courseId]
-  );
-
-  return result.rows[0] || { message: "Already in favorites" };
-}
-
 // GET USER FAVORITES
 async function getMyFavorites(userId) {
   const result = await pool.query(
@@ -26,6 +13,19 @@ async function getMyFavorites(userId) {
   );
 
   return result.rows;
+}
+
+// ADD FAVORITE
+async function addFavorite(userId, courseId) {
+  const result = await pool.query(
+    `INSERT INTO favorites (user_id, course_id)
+    VALUES ($1,$2)
+    ON CONFLICT (user_id, course_id) DO NOTHING
+    RETURNING *`,
+    [userId, courseId]
+  );
+
+  return result.rows[0] || { message: "Already in favorites" };
 }
 
 // REMOVE FAVORITE
