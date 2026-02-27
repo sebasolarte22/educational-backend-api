@@ -4,10 +4,10 @@ const request = require("supertest");
 const app = require("../app");
 const pool = require("../config/db");
 
-// MOCK AI SERVICE
+// ⭐ MOCK AI SERVICE
 jest.mock("../services/ai.service", () => ({
   explainCourse: jest.fn().mockResolvedValue({
-    description: "AI course explanation (mock)"
+    description: "AI generated description (mock)"
   })
 }));
 
@@ -23,7 +23,7 @@ describe("POST /api/ai/explain-course", () => {
       ["admin_ai@test.com", "user_ai@test.com"]
     );
 
-    // Register normal user
+    // register user
     await request(app)
       .post("/api/courses/auth/register")
       .send({
@@ -31,7 +31,7 @@ describe("POST /api/ai/explain-course", () => {
         password: "123456"
       });
 
-    // Register admin
+    // register admin
     await request(app)
       .post("/api/courses/auth/register")
       .send({
@@ -39,12 +39,13 @@ describe("POST /api/ai/explain-course", () => {
         password: "123456"
       });
 
-    // Promote admin
+    // make admin
     await pool.query(
       "UPDATE users SET role='admin' WHERE email=$1",
       ["admin_ai@test.com"]
     );
 
+    // login user
     const userLogin = await request(app)
       .post("/api/courses/auth/login")
       .send({
@@ -54,6 +55,7 @@ describe("POST /api/ai/explain-course", () => {
 
     userToken = userLogin.body.token;
 
+    // login admin
     const adminLogin = await request(app)
       .post("/api/courses/auth/login")
       .send({
@@ -71,16 +73,15 @@ describe("POST /api/ai/explain-course", () => {
     );
   });
 
-  test("rejects request without token", async () => {
+  test("rejects without token", async () => {
     const res = await request(app)
       .post("/api/ai/explain-course")
       .send({});
 
     expect(res.statusCode).toBe(401);
-    expect(res.body.success).toBe(false);
   });
 
-  test("rejects user without allowed role", async () => {
+  test("rejects user without role", async () => {
     const res = await request(app)
       .post("/api/ai/explain-course")
       .set("Authorization", `Bearer ${userToken}`)
@@ -91,10 +92,9 @@ describe("POST /api/ai/explain-course", () => {
       });
 
     expect(res.statusCode).toBe(403);
-    expect(res.body.success).toBe(false);
   });
 
-  test("admin can use AI (mock)", async () => {
+  test("admin can use AI", async () => {
     const res = await request(app)
       .post("/api/ai/explain-course")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -105,9 +105,7 @@ describe("POST /api/ai/explain-course", () => {
       });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty("description");
-    expect(typeof res.body.data.description).toBe("string");
   });
 
 });

@@ -1,20 +1,19 @@
 -- =====================
--- USUARIOS
+-- USERS
 -- =====================
-CREATE TABLE usuarios (
+CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
-  password TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
   role VARCHAR(20) DEFAULT 'user',
   created_at TIMESTAMP DEFAULT now()
 );
-
 -- =====================
 -- REFRESH TOKENS
 -- =====================
 CREATE TABLE refresh_tokens (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL,
   revoked BOOLEAN DEFAULT false,
   expires_at TIMESTAMP NOT NULL,
@@ -22,17 +21,17 @@ CREATE TABLE refresh_tokens (
 );
 
 -- =====================
--- CURSOS
+-- COURSES 
 -- =====================
-CREATE TABLE cursos (
+CREATE TABLE courses (
   id SERIAL PRIMARY KEY,
-  titulo VARCHAR(255) NOT NULL,
-  categoria VARCHAR(50) NOT NULL,
-  lenguaje VARCHAR(50),
-  materia VARCHAR(50),
-  nivel VARCHAR(50),
-  vistas INTEGER DEFAULT 0,
-  created_by INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  language VARCHAR(50),
+  subject VARCHAR(50),
+  level VARCHAR(50),
+  views INTEGER DEFAULT 0,
+  created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT now()
 );
 
@@ -41,10 +40,10 @@ CREATE TABLE cursos (
 -- =====================
 CREATE TABLE ai_logs (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL,
-  input JSONB NOT NULL,
-  output TEXT,
+  input_data JSONB NOT NULL,
+  output_data TEXT,
   mode TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT now()
 );
@@ -72,7 +71,7 @@ CREATE TABLE documents (
   file_path TEXT NOT NULL,
   mime_type VARCHAR(100) NOT NULL,
   status VARCHAR(20) DEFAULT 'pending',
-  uploaded_by INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT now()
 );
 
@@ -97,6 +96,32 @@ CREATE TABLE document_audit (
   id SERIAL PRIMARY KEY,
   document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
   action VARCHAR(50) NOT NULL,
-  user_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT now()
 );
+
+-- =====================
+-- FAVORITES
+-- =====================
+CREATE TABLE favorites (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE (user_id, course_id)
+);
+
+-- ==========================
+-- COURSE PROGRESS
+-- ==========================
+CREATE TABLE course_progress (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  progress INTEGER DEFAULT 0,
+  last_position INTEGER DEFAULT 0,
+  completed BOOLEAN DEFAULT false,
+  updated_at TIMESTAMP DEFAULT now(),
+  UNIQUE (user_id, course_id)
+);
+

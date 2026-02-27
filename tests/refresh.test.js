@@ -5,16 +5,16 @@ const bcrypt = require("bcrypt");
 const app = require("../app");
 const pool = require("../config/db");
 
-describe("AUTH - Refresh Tokens", () => {
+describe("AUTH — Refresh Tokens", () => {
 
   const agent = request.agent(app);
   let accessToken;
 
   beforeAll(async () => {
     await pool.query(
-      `INSERT INTO usuarios (email, password, role)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (email) DO NOTHING`,
+      `INSERT INTO users (email, password_hash, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (email) DO NOTHING`,
       [
         "refresh@test.com",
         await bcrypt.hash("123456", 10),
@@ -24,12 +24,17 @@ describe("AUTH - Refresh Tokens", () => {
   });
 
   afterAll(async () => {
+    await pool.query(
+      "DELETE FROM users WHERE email = $1",
+      ["refresh@test.com"]
+    );
+
     await pool.end();
   });
 
-  test("Login guarda refresh token y devuelve access token", async () => {
+  test("Login stores refresh token and returns access token", async () => {
     const res = await agent
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send({
         email: "refresh@test.com",
         password: "123456"
@@ -41,9 +46,9 @@ describe("AUTH - Refresh Tokens", () => {
     accessToken = res.body.token;
   });
 
-  test("Refresh devuelve nuevo access token", async () => {
+  test("Refresh returns new access token", async () => {
     const res = await agent
-      .post("/api/cursos/auth/refresh");
+      .post("/api/courses/auth/refresh");
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty("token");

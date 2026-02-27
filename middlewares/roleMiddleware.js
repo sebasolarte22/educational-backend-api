@@ -1,14 +1,13 @@
 const AppError = require("../utils/AppError");
 
-function roleMiddleware(...rolesPermitidos) {
+function roleMiddleware(...allowedRoles) {
   return (req, res, next) => {
-
     if (!req.user || !req.user.role) {
-      throw new AppError("Información de usuario no disponible", 500);
+      throw new AppError("User info not available", 500);
     }
 
-    if (!rolesPermitidos.includes(req.user.role)) {
-      throw new AppError("No tienes permisos para esta acción", 403);
+    if (!allowedRoles.includes(req.user.role)) {
+      throw new AppError("You do not have permission for this action", 403);
     }
 
     next();

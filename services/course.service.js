@@ -2,12 +2,11 @@ const pool = require("../config/db");
 const cache = require("../infrastructure/redis/cacheRepository");
 const logger = require("../utils/logger");
 
-// ==========================
-// GET LIST (CON CACHE)
-// ==========================
-async function getCursos({ categoria, filters, ordenar, page, limit }) {
-
-  const cacheKey = `courses:${categoria}:${JSON.stringify(filters)}:${ordenar}:${page}:${limit}`;
+// =====================================================
+// GET LIST (WITH CACHE)
+// =====================================================
+async function getCourses({ category, filters, sort, page, limit }) {
+  const cacheKey = `courses:${category}:${JSON.stringify(filters)}:${sort}:${page}:${limit}`;
 
   const cached = await cache.get(cacheKey);
 
@@ -18,8 +17,8 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
 
   logger.debug({ event: "CACHE_MISS", cacheKey });
 
-  let query = `SELECT * FROM cursos WHERE categoria=$1`;
-  const params = [categoria];
+  let query = `SELECT * FROM courses WHERE category=$1`;
+  const params = [category];
   let i = 2;
 
   if (filters) {
@@ -31,8 +30,8 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
     }
   }
 
-  query += ordenar === "vistas"
-    ? " ORDER BY vistas DESC"
+  query += sort === "views"
+    ? " ORDER BY views DESC"
     : " ORDER BY id ASC";
 
   const offset = (page - 1) * limit;
@@ -47,12 +46,11 @@ async function getCursos({ categoria, filters, ordenar, page, limit }) {
   return result.rows;
 }
 
-// ==========================
-// GET BY ID
-// ==========================
-async function getCursoById({ id, categoria }) {
-
-  const cacheKey = `course:${categoria}:${id}`;
+// =====================================================
+// GET BY ID (WITH CACHE)
+// =====================================================
+async function getCourseById({ id, category }) {
+  const cacheKey = `course:${category}:${id}`;
 
   const cached = await cache.get(cacheKey);
 
@@ -64,145 +62,164 @@ async function getCursoById({ id, categoria }) {
   logger.debug({ event: "CACHE_MISS_ID", cacheKey });
 
   const result = await pool.query(
-    `SELECT * FROM cursos WHERE id=$1 AND categoria=$2`,
-    [id, categoria]
+    `SELECT * FROM courses WHERE id=$1 AND category=$2`,
+    [id, category]
   );
 
-  const curso = result.rows[0] || null;
+  const course = result.rows[0] || null;
 
-  if (curso) {
-    await cache.set(cacheKey, curso, 120);
+  if (course) {
+    await cache.set(cacheKey, course, 120);
   }
 
-  return curso;
+  return course;
 }
 
-// ==========================
-// CREATE
-// ==========================
-async function createCurso(data) {
-  const { titulo, categoria, nivel, vistas, created_by } = data;
+// =====================================================
+// CREATE (INVALIDATE LIST CACHE)
+// =====================================================
+async function createCourse(data) {
+  const { title, category, level, views, created_by } = data;
 
-  const field = categoria === "programacion" ? "lenguaje" : "materia";
+  const field = category === "programming" ? "language" : "subject";
 
   const result = await pool.query(
-    `INSERT INTO cursos (titulo, categoria, ${field}, vistas, nivel, created_by)
+    `INSERT INTO courses (title, category, ${field}, views, level, created_by)
     VALUES ($1,$2,$3,$4,$5,$6)
     RETURNING *`,
-    [titulo, categoria, data[field], vistas || 0, nivel, created_by]
+    [title, category, data[field], views || 0, level, created_by]
   );
 
-  await cache.delByPattern(`courses:${categoria}:*`);
+  await cache.delByPattern(`courses:${category}:*`);
 
-  logger.debug({ event: "CACHE_INVALIDATION_LIST", categoria });
+  logger.debug({
+    event: "CACHE_INVALIDATION_LIST",
+    category
+  });
 
   return result.rows[0];
 }
 
-// ==========================
+// =====================================================
 // UPDATE (PUT)
-// ==========================
-async function updateCurso({ id, categoria, data }) {
-  const field = categoria === "programacion" ? "lenguaje" : "materia";
+// =====================================================
+async function updateCourse({ id, category, data }) {
+  const field = category === "programming" ? "language" : "subject";
 
   const result = await pool.query(
-    `UPDATE cursos
-    SET titulo=$1, ${field}=$2, vistas=$3, nivel=$4
-    WHERE id=$5 AND categoria=$6
+    `UPDATE courses
+    SET title=$1, ${field}=$2, views=$3, level=$4
+    WHERE id=$5 AND category=$6
     RETURNING *`,
-    [data.titulo, data[field], data.vistas || 0, data.nivel, id, categoria]
+    [data.title, data[field], data.views || 0, data.level, id, category]
   );
 
-  const curso = result.rows[0] || null;
+  const course = result.rows[0] || null;
 
-  if (curso) {
-    await cache.del(`course:${categoria}:${id}`);
-    await cache.delByPattern(`courses:${categoria}:*`);
+  if (course) {
+    await cache.del(`course:${category}:${id}`);
+    await cache.delByPattern(`courses:${category}:*`);
 
-    logger.debug({ event: "CACHE_INVALIDATION_UPDATE", id, categoria });
+    logger.debug({
+      event: "CACHE_INVALIDATION_UPDATE",
+      id,
+      category
+    });
   }
 
-  return curso;
+  return course;
 }
 
-// ==========================
-// PATCH 
-// ==========================
-async function patchCurso({ id, categoria, data }) {
+// =====================================================
+// PATCH (PARTIAL UPDATE)
+// =====================================================
+async function patchCourse({ id, category, data }) {
+  const field = category === "programming" ? "language" : "subject";
 
-  const allowedFields = ["titulo", "nivel", "vistas", "lenguaje", "materia"];
-
-  const updates = [];
+  const fields = [];
   const params = [];
   let i = 1;
 
-  for (const key of Object.keys(data)) {
-    if (allowedFields.includes(key) && data[key] !== undefined) {
-      updates.push(`${key}=$${i++}`);
-      params.push(data[key]);
-    }
+  if (data.title !== undefined) {
+    fields.push(`title=$${i++}`);
+    params.push(data.title);
   }
 
-  if (updates.length === 0) {
-    return null;
+  if (data[field] !== undefined) {
+    fields.push(`${field}=$${i++}`);
+    params.push(data[field]);
   }
 
-  params.push(id);
-  params.push(categoria);
+  if (data.views !== undefined) {
+    fields.push(`views=$${i++}`);
+    params.push(data.views);
+  }
 
-  const query = `
-    UPDATE cursos
-    SET ${updates.join(", ")}
-    WHERE id=$${i++} AND categoria=$${i}
-    RETURNING *
-  `;
+  if (data.level !== undefined) {
+    fields.push(`level=$${i++}`);
+    params.push(data.level);
+  }
 
-  const result = await pool.query(query, params);
+  if (fields.length === 0) return null;
 
-  const curso = result.rows[0] || null;
+  params.push(id, category);
 
-  if (curso) {
-    await cache.del(`course:${categoria}:${id}`);
-    await cache.delByPattern(`courses:${categoria}:*`);
+  const result = await pool.query(
+    `UPDATE courses
+    SET ${fields.join(", ")}
+    WHERE id=$${i++} AND category=$${i}
+    RETURNING *`,
+    params
+  );
+
+  const course = result.rows[0] || null;
+
+  if (course) {
+    await cache.del(`course:${category}:${id}`);
+    await cache.delByPattern(`courses:${category}:*`);
 
     logger.debug({
       event: "CACHE_INVALIDATION_PATCH",
       id,
-      categoria
+      category
     });
   }
 
-  return curso;
+  return course;
 }
 
-// ==========================
+// =====================================================
 // DELETE
-// ==========================
-async function deleteCurso({ id, categoria }) {
+// =====================================================
+async function deleteCourse({ id, category }) {
   const result = await pool.query(
-    `DELETE FROM cursos
-    WHERE id=$1 AND categoria=$2
+    `DELETE FROM courses
+    WHERE id=$1 AND category=$2
     RETURNING *`,
-    [id, categoria]
+    [id, category]
   );
 
-  const curso = result.rows[0] || null;
+  const course = result.rows[0] || null;
 
-  if (curso) {
-    await cache.del(`course:${categoria}:${id}`);
-    await cache.delByPattern(`courses:${categoria}:*`);
+  if (course) {
+    await cache.del(`course:${category}:${id}`);
+    await cache.delByPattern(`courses:${category}:*`);
 
-    logger.debug({ event: "CACHE_INVALIDATION_DELETE", id, categoria });
+    logger.debug({
+      event: "CACHE_INVALIDATION_DELETE",
+      id,
+      category
+    });
   }
 
-  return curso;
+  return course;
 }
 
 module.exports = {
-  getCursos,
-  getCursoById,
-  createCurso,
-  updateCurso,
-  patchCurso, 
-  deleteCurso
+  getCourses,
+  getCourseById,
+  createCourse,
+  updateCourse,
+  patchCourse,
+  deleteCourse
 };

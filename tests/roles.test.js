@@ -13,68 +13,67 @@ describe("Roles: admin vs user", () => {
   beforeAll(async () => {
 
     await pool.query(
-      `INSERT INTO usuarios (email, password, role)
+      `INSERT INTO users (email, password_hash, role)
       VALUES ($1, $2, $3)
       ON CONFLICT (email) DO NOTHING`,
       ["user@test.com", await bcrypt.hash("123456", 10), "user"]
     );
 
     await pool.query(
-      `INSERT INTO usuarios (email, password, role)
+      `INSERT INTO users (email, password_hash, role)
       VALUES ($1, $2, $3)
       ON CONFLICT (email) DO NOTHING`,
       ["admin@test.com", await bcrypt.hash("123456", 10), "admin"]
     );
 
     const adminRes = await request(app)
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send({ email: "admin@test.com", password: "123456" });
 
     adminToken = adminRes.body.token;
 
     const userRes = await request(app)
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send({ email: "user@test.com", password: "123456" });
 
     userToken = userRes.body.token;
   });
 
-  // ⭐ LIMPIAR CURSOS CREADOS POR TESTS
+  // Clean courses created by tests
   afterEach(async () => {
     await pool.query(
-      "DELETE FROM cursos WHERE titulo LIKE 'Curso%'"
+      "DELETE FROM courses WHERE title LIKE 'Course%'"
     );
   });
 
-  // ⭐ NO cerrar pool aquí
   afterAll(async () => {
     await pool.query(
-      "DELETE FROM usuarios WHERE email IN ($1,$2)",
+      "DELETE FROM users WHERE email IN ($1,$2)",
       ["user@test.com", "admin@test.com"]
     );
   });
 
-  test("USER puede crear curso", async () => {
+  test("USER can create course", async () => {
     const res = await request(app)
-      .post("/api/cursos/programacion")
+      .post("/api/courses/programming")
       .set("Authorization", `Bearer ${userToken}`)
       .send({
-        titulo: "Curso USER",
-        lenguaje: "JS",
-        nivel: "Basico"
+        title: "Course USER",
+        language: "JS",
+        level: "Basic"
       });
 
     expect(res.statusCode).toBe(201);
   });
 
-  test("ADMIN puede crear curso", async () => {
+  test("ADMIN can create course", async () => {
     const res = await request(app)
-      .post("/api/cursos/programacion")
+      .post("/api/courses/programming")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        titulo: "Curso ADMIN",
-        lenguaje: "JS",
-        nivel: "Basico"
+        title: "Course ADMIN",
+        language: "JS",
+        level: "Basic"
       });
 
     expect(res.statusCode).toBe(201);

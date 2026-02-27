@@ -1,17 +1,16 @@
 const asyncHandler = require("../middlewares/asyncHandler");
 const AppError = require("../utils/AppError");
-const aiService = require("../services/aiService");
+const aiService = require("../services/ai.service");
 
-exports.explicarCurso = asyncHandler(async (req, res) => {
+exports.explainCourse = asyncHandler(async (req, res) => {
+  const { title, category, level } = req.body;
 
-  const { titulo, categoria, nivel } = req.body;
-
-  if (!titulo || !categoria || !nivel) {
-    throw new AppError("Campos obligatorios faltantes", 400);
+  if (!title || !category || !level) {
+    throw new AppError("Missing required fields", 400);
   }
 
-  const result = await aiService.explicarCurso(
-    { titulo, categoria, nivel },
+  const result = await aiService.explainCourse(
+    { title, category, level },
     req.user.id
   );
 
@@ -19,5 +18,4 @@ exports.explicarCurso = asyncHandler(async (req, res) => {
     success: true,
     data: result
   });
-
 });

@@ -7,7 +7,7 @@ const aiRateLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    error: "Demasiadas solicitudes a la IA. Intenta más tarde."
+    error: "Too many requests to the AI. Try later."
   }
 });
 

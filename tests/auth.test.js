@@ -9,7 +9,7 @@ describe("AUTH - Login", () => {
 
   beforeAll(async () => {
     await pool.query(
-      `INSERT INTO usuarios (email, password, role)
+      `INSERT INTO users (email, password_hash, role)
       VALUES ($1, $2, $3)
       ON CONFLICT (email) DO NOTHING`,
       [
@@ -24,9 +24,9 @@ describe("AUTH - Login", () => {
     await pool.end();
   });
 
-  test("Login correcto debe devolver un token", async () => {
+  test("Valid login should return token", async () => {
     const res = await request(app)
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send({
         email: "sebastian2@test.com",
         password: "123456"
@@ -36,12 +36,12 @@ describe("AUTH - Login", () => {
     expect(res.body).toHaveProperty("token");
   });
 
-  test("Login con password incorrecto debe fallar", async () => {
+  test("Invalid password should fail", async () => {
     const res = await request(app)
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send({
         email: "sebastian2@test.com",
-        password: "malpassword"
+        password: "wrongpassword"
       });
 
     expect(res.statusCode).toBe(401);

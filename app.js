@@ -27,15 +27,16 @@ app.use((req, res, next) => {
 // ==========================
 // ROUTERS
 // ==========================
-app.use("/api/cursos", require("./routers/course.router"));   
-app.use("/api/cursos/auth", require("./routers/auth"));
-app.use("/api/ai", require("./routers/ai"));
-
+app.use("/api/courses", require("./routers/course.router"));   
+app.use("/api/courses/auth", require("./routers/auth.router"));
+app.use("/api/ai", require("./routers/ai.router"));
+app.use("/api/favorites", require("./routers/fav.router"));
+app.use("/api/progress", require("./routers/progress.router"));
 // ==========================
 // ROOT
 // ==========================
 app.get("/", (req, res) => {
-  res.send("API cursos");
+  res.send("API COURSES");
 });
 
 // ==========================

@@ -7,6 +7,7 @@ async function isAdminOrOwner(req, res, next) {
   const userRole = req.user.role;
   const { id } = req.params;
 
+  // ADMIN → always allowed
   if (userRole === "admin") {
     logger.info({
       event: "ADMIN_ACCESS_GRANTED",
@@ -17,21 +18,21 @@ async function isAdminOrOwner(req, res, next) {
   }
 
   if (isNaN(id)) {
-    throw new AppError("ID inválido", 400);
+    throw new AppError("Invalid ID", 400);
   }
 
   const result = await pool.query(
-    `SELECT created_by FROM cursos WHERE id = $1`,
+    `SELECT created_by FROM courses WHERE id = $1`,
     [id]
   );
 
   if (result.rowCount === 0) {
-    throw new AppError("Curso no encontrado", 404);
+    throw new AppError("Course not found", 404);
   }
 
-  const curso = result.rows[0];
+  const course = result.rows[0];
 
-  if (curso.created_by !== userId) {
+  if (course.created_by !== userId) {
     logger.warn({
       event: "UNAUTHORIZED_RESOURCE_ACCESS",
       userId,
@@ -39,7 +40,7 @@ async function isAdminOrOwner(req, res, next) {
     });
 
     throw new AppError(
-      "No tienes permisos para modificar este recurso",
+      "You do not have permission to modify this resource",
       403
     );
   }

@@ -1,161 +1,151 @@
-const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
+const pool = require("../config/db");
 const AppError = require("../utils/AppError");
-const logger = require("../utils/logger");
 
-const {
-  generateAccessToken,
-  generateRefreshToken,
-  hashToken
-} = require("../utils/tokens");
+const SALT = 10;
 
-const blacklist = require("../infrastructure/redis/blacklistRepository");
-
+//
 // ==========================
 // REGISTER
 // ==========================
+//
 async function register({ email, password }) {
   if (!email || !password) {
-    throw new AppError("Email y password son obligatorios", 400);
+    throw new AppError("Email and password required", 400);
   }
 
-  const existe = await pool.query(
-    "SELECT id FROM usuarios WHERE email = $1",
+  const exists = await pool.query(
+    "SELECT id FROM users WHERE email = $1",
     [email]
   );
 
-  if (existe.rowCount > 0) {
-    throw new AppError("El usuario ya existe", 409);
+  if (exists.rowCount > 0) {
+    throw new AppError("User already exists", 409);
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, SALT);
 
   const result = await pool.query(
-    `INSERT INTO usuarios (email, password)
-    VALUES ($1, $2)
+    `INSERT INTO users (email, password_hash)
+    VALUES ($1,$2)
     RETURNING id, email, role`,
-    [email, hashedPassword]
+    [email, passwordHash]
   );
-
-  logger.info({
-    event: "USER_REGISTERED",
-    userId: result.rows[0].id
-  });
 
   return result.rows[0];
 }
 
+//
 // ==========================
 // LOGIN
 // ==========================
+//
 async function login({ email, password }) {
-  if (!email || !password) {
-    throw new AppError("Email y password son obligatorios", 400);
-  }
-
   const result = await pool.query(
-    "SELECT * FROM usuarios WHERE email = $1",
+    "SELECT * FROM users WHERE email = $1",
     [email]
   );
 
-  if (result.rowCount === 0) {
-    throw new AppError("Credenciales inválidas", 401);
+  const user = result.rows[0];
+
+  if (!user) {
+    throw new AppError("Invalid credentials", 401);
   }
 
-  const usuario = result.rows[0];
+  const valid = await bcrypt.compare(password, user.password_hash);
 
-  const passwordValido = await bcrypt.compare(
-    password,
-    usuario.password
+  if (!valid) {
+    throw new AppError("Invalid credentials", 401);
+  }
+
+  // ACCESS TOKEN
+  const accessToken = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: "15m" }
   );
 
-  if (!passwordValido) {
-    throw new AppError("Credenciales inválidas", 401);
-  }
+  // REFRESH TOKEN
+  const refreshToken = jwt.sign(
+    { id: user.id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
 
-  const accessToken = generateAccessToken(usuario);
-  const refreshToken = generateRefreshToken(usuario);
-  const refreshHash = hashToken(refreshToken);
+  const tokenHash = await bcrypt.hash(refreshToken, SALT);
 
   await pool.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-    VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-    [usuario.id, refreshHash]
+    VALUES ($1,$2, NOW() + interval '7 days')`,
+    [user.id, tokenHash]
   );
 
-  logger.info({
-    event: "LOGIN_SUCCESS",
-    userId: usuario.id
-  });
-
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    refreshToken
+  };
 }
 
+//
 // ==========================
-// REFRESH
+// REFRESH (ROTATION)
 // ==========================
-async function refresh({ refreshToken }) {
-  if (!refreshToken) {
-    throw new AppError("Refresh token requerido", 401);
+//
+async function refresh(oldToken) {
+  if (!oldToken) {
+    throw new AppError("Refresh token required", 401);
   }
 
-  const payload = jwt.verify(
-    refreshToken,
-    process.env.JWT_REFRESH_SECRET
-  );
+  const payload = jwt.verify(oldToken, process.env.JWT_REFRESH_SECRET);
 
-  const tokenHash = hashToken(refreshToken);
-
-  // ⭐ CHECK BLACKLIST (nuevo)
-  const blacklisted = await blacklist.has(tokenHash);
-  if (blacklisted) {
-    throw new AppError("Refresh token inválido", 401);
-  }
-
-  const tokenResult = await pool.query(
-    `SELECT * FROM refresh_tokens
-    WHERE token_hash = $1 AND revoked = false`,
-    [tokenHash]
-  );
-
-  if (tokenResult.rowCount === 0) {
-    throw new AppError("Refresh token inválido", 401);
-  }
-
-  // ⭐ rotation DB revoke
-  await pool.query(
-    `UPDATE refresh_tokens
-    SET revoked = true
-    WHERE token_hash = $1`,
-    [tokenHash]
-  );
-
-  // ⭐ add blacklist (nuevo)
-  await blacklist.add(tokenHash);
-
-  const userResult = await pool.query(
-    `SELECT id, email, role FROM usuarios WHERE id = $1`,
+  const result = await pool.query(
+    "SELECT * FROM refresh_tokens WHERE user_id = $1 AND revoked = false",
     [payload.id]
   );
 
-  const user = userResult.rows[0];
+  const tokens = result.rows;
 
-  const newAccessToken = generateAccessToken(user);
-  const newRefreshToken = generateRefreshToken(user);
-  const newRefreshHash = hashToken(newRefreshToken);
+  let validRecord = null;
+
+  for (const record of tokens) {
+    const ok = await bcrypt.compare(oldToken, record.token_hash);
+    if (ok) {
+      validRecord = record;
+      break;
+    }
+  }
+
+  if (!validRecord) {
+    throw new AppError("Invalid refresh token", 401);
+  }
+
+  // revoke old
+  await pool.query(
+    "UPDATE refresh_tokens SET revoked = true WHERE id = $1",
+    [validRecord.id]
+  );
+
+  // new tokens
+  const newAccessToken = jwt.sign(
+    { id: payload.id },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: "15m" }
+  );
+
+  const newRefreshToken = jwt.sign(
+    { id: payload.id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  const newHash = await bcrypt.hash(newRefreshToken, SALT);
 
   await pool.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-    VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-    [user.id, newRefreshHash]
+    VALUES ($1,$2, NOW() + interval '7 days')`,
+    [payload.id, newHash]
   );
-
-  logger.info({
-    event: "REFRESH_SUCCESS",
-    userId: user.id
-  });
 
   return {
     accessToken: newAccessToken,
@@ -163,27 +153,31 @@ async function refresh({ refreshToken }) {
   };
 }
 
+//
 // ==========================
 // LOGOUT
 // ==========================
-async function logout({ refreshToken }) {
+//
+async function logout(refreshToken) {
   if (!refreshToken) return;
 
-  const tokenHash = hashToken(refreshToken);
+  const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-  await pool.query(
-    `UPDATE refresh_tokens
-    SET revoked = true
-    WHERE token_hash = $1`,
-    [tokenHash]
+  const result = await pool.query(
+    "SELECT * FROM refresh_tokens WHERE user_id = $1 AND revoked = false",
+    [payload.id]
   );
 
-  // ⭐ add blacklist (nuevo)
-  await blacklist.add(tokenHash);
+  for (const record of result.rows) {
+    const ok = await bcrypt.compare(refreshToken, record.token_hash);
 
-  logger.info({
-    event: "LOGOUT_SUCCESS"
-  });
+    if (ok) {
+      await pool.query(
+        "UPDATE refresh_tokens SET revoked = true WHERE id = $1",
+        [record.id]
+      );
+    }
+  }
 }
 
 module.exports = {

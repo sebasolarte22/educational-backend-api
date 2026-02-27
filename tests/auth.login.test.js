@@ -4,7 +4,7 @@ const request = require("supertest");
 const app = require("../app");
 const pool = require("../config/db");
 
-describe("POST /api/cursos/auth/login", () => {
+describe("POST /api/courses/auth/login", () => {
 
   const user = {
     email: "login@test.com",
@@ -12,28 +12,30 @@ describe("POST /api/cursos/auth/login", () => {
   };
 
   beforeAll(async () => {
+    // Clean user if exists
     await pool.query(
-      "DELETE FROM usuarios WHERE email = $1",
+      "DELETE FROM users WHERE email = $1",
       [user.email]
     );
 
+    // Register user first
     await request(app)
-      .post("/api/cursos/auth/register")
+      .post("/api/courses/auth/register")
       .send(user)
       .expect(201);
   });
 
   afterAll(async () => {
     await pool.query(
-      "DELETE FROM usuarios WHERE email = $1",
+      "DELETE FROM users WHERE email = $1",
       [user.email]
     );
     await pool.end();
   });
 
-  test("login exitoso devuelve token", async () => {
+  test("Successful login should return token", async () => {
     const res = await request(app)
-      .post("/api/cursos/auth/login")
+      .post("/api/courses/auth/login")
       .send(user);
 
     expect(res.statusCode).toBe(200);
