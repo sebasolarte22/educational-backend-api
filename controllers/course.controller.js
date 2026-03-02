@@ -6,7 +6,6 @@ const courseService = require("../services/course.service");
 // PROGRAMMING
 // ==========================
 
-// GET LIST
 const getProgramming = asyncHandler(async (req, res) => {
   const { language, level, sort, page, limit } = req.query;
 
@@ -21,7 +20,6 @@ const getProgramming = asyncHandler(async (req, res) => {
   res.json(courses);
 });
 
-// GET BY ID
 const getProgrammingById = asyncHandler(async (req, res) => {
   const course = await courseService.getCourseById({
     id: req.params.id,
@@ -33,7 +31,6 @@ const getProgrammingById = asyncHandler(async (req, res) => {
   res.json(course);
 });
 
-// CREATE
 const createProgramming = asyncHandler(async (req, res) => {
   const course = await courseService.createCourse({
     ...req.body,
@@ -44,7 +41,6 @@ const createProgramming = asyncHandler(async (req, res) => {
   res.status(201).json(course);
 });
 
-// PUT
 const updateProgramming = asyncHandler(async (req, res) => {
   const course = await courseService.updateCourse({
     id: req.params.id,
@@ -52,19 +48,14 @@ const updateProgramming = asyncHandler(async (req, res) => {
     data: req.body
   });
 
-  if (!course) throw new AppError("Course not found", 404);
-
   res.json(course);
 });
 
-// DELETE
 const deleteProgramming = asyncHandler(async (req, res) => {
   const course = await courseService.deleteCourse({
     id: req.params.id,
     category: "programming"
   });
-
-  if (!course) throw new AppError("Course not found", 404);
 
   res.json(course);
 });
@@ -115,8 +106,6 @@ const updateMathematics = asyncHandler(async (req, res) => {
     data: req.body
   });
 
-  if (!course) throw new AppError("Course not found", 404);
-
   res.json(course);
 });
 
@@ -126,30 +115,21 @@ const deleteMathematics = asyncHandler(async (req, res) => {
     category: "mathematics"
   });
 
-  if (!course) throw new AppError("Course not found", 404);
-
   res.json(course);
 });
 
 // ==========================
-// PATCH (GENERIC)
+// FULL STRUCTURE
 // ==========================
-const patchCourse = asyncHandler(async (req, res) => {
-  const category =
-    req.originalUrl.includes("programming")
-      ? "programming"
-      : "mathematics";
-
-  const course = await courseService.patchCourse({
-    id: req.params.id,
-    category,
-    data: req.body
-  });
-
-  if (!course) throw new AppError("Course not found", 404);
-
+const getCourseFull = asyncHandler(async (req, res) => {
+  const course = await courseService.getCourseFull(
+    req.params.id,
+    req.user ? req.user.id : null
+  );
   res.json(course);
 });
+
+
 
 module.exports = {
   getProgramming,
@@ -162,5 +142,5 @@ module.exports = {
   createMathematics,
   updateMathematics,
   deleteMathematics,
-  patchCourse
+  getCourseFull
 };

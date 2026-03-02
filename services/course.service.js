@@ -1,215 +1,137 @@
-const pool = require("../config/db");
+const repository = require("../repositories/course.repository");
+const lessonProgressRepo = require("../repositories/lessonProgress.rep");
 const cache = require("../infrastructure/redis/cacheRepository");
-const logger = require("../utils/logger");
+const AppError = require("../utils/AppError");
 
-// =====================================================
-// GET LIST (WITH CACHE)
-// =====================================================
-async function getCourses({ category, filters, sort, page, limit }) {
+// ==========================
+// GET LIST
+// ==========================
+async function getCourses(params) {
+  const { category, filters, sort, page, limit } = params;
+
   const cacheKey = `courses:${category}:${JSON.stringify(filters)}:${sort}:${page}:${limit}`;
-
   const cached = await cache.get(cacheKey);
 
-  if (cached) {
-    logger.debug({ event: "CACHE_HIT", cacheKey });
-    return cached;
-  }
+  if (cached) return cached;
 
-  logger.debug({ event: "CACHE_MISS", cacheKey });
+  const courses = await repository.getCourses(params);
 
-  let query = `SELECT * FROM courses WHERE category=$1`;
-  const params = [category];
-  let i = 2;
+  await cache.set(cacheKey, courses, 60);
 
-  if (filters) {
-    for (const key of Object.keys(filters)) {
-      if (filters[key]) {
-        query += ` AND LOWER(${key})=LOWER($${i++})`;
-        params.push(filters[key]);
-      }
-    }
-  }
-
-  query += sort === "views"
-    ? " ORDER BY views DESC"
-    : " ORDER BY id ASC";
-
-  const offset = (page - 1) * limit;
-
-  query += ` LIMIT $${i++} OFFSET $${i++}`;
-  params.push(limit, offset);
-
-  const result = await pool.query(query, params);
-
-  await cache.set(cacheKey, result.rows, 60);
-
-  return result.rows;
+  return courses;
 }
 
-// =====================================================
-// GET BY ID (WITH CACHE)
-// =====================================================
+// ==========================
+// GET BY ID
+// ==========================
 async function getCourseById({ id, category }) {
-  const cacheKey = `course:${category}:${id}`;
+  const course = await repository.getCourseById(id, category);
+  return course;
+}
 
-  const cached = await cache.get(cacheKey);
+// ==========================
+// CREATE
+// ==========================
+async function createCourse(data) {
+  const course = await repository.createCourse(data);
+  await cache.delByPattern(`courses:${data.category}:*`);
+  return course;
+}
 
-  if (cached) {
-    logger.debug({ event: "CACHE_HIT_ID", cacheKey });
-    return cached;
+// ==========================
+// UPDATE
+// ==========================
+async function updateCourse(params) {
+  const course = await repository.updateCourse(params);
+
+  if (!course) {
+    throw new AppError("Course not found", 404);
   }
 
-  logger.debug({ event: "CACHE_MISS_ID", cacheKey });
-
-  const result = await pool.query(
-    `SELECT * FROM courses WHERE id=$1 AND category=$2`,
-    [id, category]
-  );
-
-  const course = result.rows[0] || null;
-
-  if (course) {
-    await cache.set(cacheKey, course, 120);
-  }
+  await cache.del(`course:${params.category}:${params.id}`);
+  await cache.delByPattern(`courses:${params.category}:*`);
 
   return course;
 }
 
-// =====================================================
-// CREATE (INVALIDATE LIST CACHE)
-// =====================================================
-async function createCourse(data) {
-  const { title, category, level, views, created_by } = data;
+// ==========================
+// DELETE
+// ==========================
+async function deleteCourse({ id, category }) {
+  const course = await repository.deleteCourse(id, category);
 
-  const field = category === "programming" ? "language" : "subject";
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
 
-  const result = await pool.query(
-    `INSERT INTO courses (title, category, ${field}, views, level, created_by)
-    VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING *`,
-    [title, category, data[field], views || 0, level, created_by]
-  );
-
+  await cache.del(`course:${category}:${id}`);
   await cache.delByPattern(`courses:${category}:*`);
 
-  logger.debug({
-    event: "CACHE_INVALIDATION_LIST",
-    category
-  });
-
-  return result.rows[0];
-}
-
-// =====================================================
-// UPDATE (PUT)
-// =====================================================
-async function updateCourse({ id, category, data }) {
-  const field = category === "programming" ? "language" : "subject";
-
-  const result = await pool.query(
-    `UPDATE courses
-    SET title=$1, ${field}=$2, views=$3, level=$4
-    WHERE id=$5 AND category=$6
-    RETURNING *`,
-    [data.title, data[field], data.views || 0, data.level, id, category]
-  );
-
-  const course = result.rows[0] || null;
-
-  if (course) {
-    await cache.del(`course:${category}:${id}`);
-    await cache.delByPattern(`courses:${category}:*`);
-
-    logger.debug({
-      event: "CACHE_INVALIDATION_UPDATE",
-      id,
-      category
-    });
-  }
-
   return course;
 }
 
-// =====================================================
-// PATCH (PARTIAL UPDATE)
-// =====================================================
-async function patchCourse({ id, category, data }) {
-  const field = category === "programming" ? "language" : "subject";
+// ==========================
+// FULL STRUCTURE + PROGRESS
+// ==========================
+async function getCourseFull(courseId, userId = null) {
+  const rows = await repository.getCourseFullStructure(courseId);
 
-  const fields = [];
-  const params = [];
-  let i = 1;
-
-  if (data.title !== undefined) {
-    fields.push(`title=$${i++}`);
-    params.push(data.title);
+  if (rows.length === 0) {
+    throw new AppError("Course not found", 404);
   }
 
-  if (data[field] !== undefined) {
-    fields.push(`${field}=$${i++}`);
-    params.push(data[field]);
+  let completedLessonIds = [];
+  let progress = 0;
+  let completedCourse = false;
+
+  if (userId) {
+    completedLessonIds =
+      await lessonProgressRepo.getCompletedLessonIds(userId, courseId);
+
+    const totalLessons =
+      await lessonProgressRepo.countTotalLessons(courseId);
+
+    progress = totalLessons === 0
+      ? 0
+      : Math.round((completedLessonIds.length / totalLessons) * 100);
+
+    completedCourse = progress === 100;
   }
 
-  if (data.views !== undefined) {
-    fields.push(`views=$${i++}`);
-    params.push(data.views);
-  }
+  const course = {
+    id: rows[0].course_id,
+    title: rows[0].course_title,
+    category: rows[0].category,
+    level: rows[0].level,
+    progress,
+    completed_course: completedCourse,
+    sections: []
+  };
 
-  if (data.level !== undefined) {
-    fields.push(`level=$${i++}`);
-    params.push(data.level);
-  }
+  const sectionsMap = {};
 
-  if (fields.length === 0) return null;
+  for (const row of rows) {
+    if (!row.section_id) continue;
 
-  params.push(id, category);
+    if (!sectionsMap[row.section_id]) {
+      sectionsMap[row.section_id] = {
+        id: row.section_id,
+        title: row.section_title,
+        position: row.section_position,
+        lessons: []
+      };
 
-  const result = await pool.query(
-    `UPDATE courses
-    SET ${fields.join(", ")}
-    WHERE id=$${i++} AND category=$${i}
-    RETURNING *`,
-    params
-  );
+      course.sections.push(sectionsMap[row.section_id]);
+    }
 
-  const course = result.rows[0] || null;
-
-  if (course) {
-    await cache.del(`course:${category}:${id}`);
-    await cache.delByPattern(`courses:${category}:*`);
-
-    logger.debug({
-      event: "CACHE_INVALIDATION_PATCH",
-      id,
-      category
-    });
-  }
-
-  return course;
-}
-
-// =====================================================
-// DELETE
-// =====================================================
-async function deleteCourse({ id, category }) {
-  const result = await pool.query(
-    `DELETE FROM courses
-    WHERE id=$1 AND category=$2
-    RETURNING *`,
-    [id, category]
-  );
-
-  const course = result.rows[0] || null;
-
-  if (course) {
-    await cache.del(`course:${category}:${id}`);
-    await cache.delByPattern(`courses:${category}:*`);
-
-    logger.debug({
-      event: "CACHE_INVALIDATION_DELETE",
-      id,
-      category
-    });
+    if (row.lesson_id) {
+      sectionsMap[row.section_id].lessons.push({
+        id: row.lesson_id,
+        title: row.lesson_title,
+        position: row.lesson_position,
+        completed: completedLessonIds.includes(row.lesson_id)
+      });
+    }
   }
 
   return course;
@@ -220,6 +142,6 @@ module.exports = {
   getCourseById,
   createCourse,
   updateCourse,
-  patchCourse,
-  deleteCourse
+  deleteCourse,
+  getCourseFull
 };

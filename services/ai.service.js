@@ -80,7 +80,7 @@ async function explainCourse(data, userId) {
     // Save log
     await pool.query(
       `INSERT INTO ai_logs (user_id, endpoint, input_data, output_data, mode)
-       VALUES ($1, $2, $3, $4, $5)`,
+      VALUES ($1, $2, $3, $4, $5)`,
       [
         userId,
         "explain-course",

@@ -5,25 +5,30 @@ const logger = require("../utils/logger");
 async function isAdminOrOwner(req, res, next) {
   const userId = req.user.id;
   const userRole = req.user.role;
-  const { id } = req.params;
 
-  // ADMIN → always allowed
+  // Puede venir de params (:id) o del body (course_id)
+  const rawCourseId = req.params.id || req.body.course_id;
+  const courseId = Number(rawCourseId);
+
+  // 🔒 Validación fuerte
+  if (!courseId || isNaN(courseId)) {
+    throw new AppError("Invalid course ID", 400);
+  }
+
+  // 👑 ADMIN siempre puede
   if (userRole === "admin") {
     logger.info({
       event: "ADMIN_ACCESS_GRANTED",
       userId,
-      resourceId: id
+      courseId
     });
     return next();
   }
 
-  if (isNaN(id)) {
-    throw new AppError("Invalid ID", 400);
-  }
-
+  // 🔎 Buscar curso
   const result = await pool.query(
     `SELECT created_by FROM courses WHERE id = $1`,
-    [id]
+    [courseId]
   );
 
   if (result.rowCount === 0) {
@@ -32,11 +37,12 @@ async function isAdminOrOwner(req, res, next) {
 
   const course = result.rows[0];
 
+  // 🔒 Validar ownership
   if (course.created_by !== userId) {
     logger.warn({
       event: "UNAUTHORIZED_RESOURCE_ACCESS",
       userId,
-      resourceId: id
+      courseId
     });
 
     throw new AppError(
@@ -48,7 +54,7 @@ async function isAdminOrOwner(req, res, next) {
   logger.info({
     event: "OWNER_ACCESS_GRANTED",
     userId,
-    resourceId: id
+    courseId
   });
 
   next();

@@ -8,6 +8,7 @@ CREATE TABLE users (
   role VARCHAR(20) DEFAULT 'user',
   created_at TIMESTAMP DEFAULT now()
 );
+
 -- =====================
 -- REFRESH TOKENS
 -- =====================
@@ -20,8 +21,8 @@ CREATE TABLE refresh_tokens (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- =====================x
--- COURSES 
+-- =====================
+-- COURSES
 -- =====================
 CREATE TABLE courses (
   id SERIAL PRIMARY KEY,
@@ -33,6 +34,74 @@ CREATE TABLE courses (
   views INTEGER DEFAULT 0,
   created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT now()
+);
+
+-- =====================
+-- SECTIONS
+-- =====================
+CREATE TABLE sections (
+  id SERIAL PRIMARY KEY,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  position INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_sections_course ON sections(course_id);
+
+-- =====================
+-- LESSONS
+-- =====================
+CREATE TABLE lessons (
+  id SERIAL PRIMARY KEY,
+  section_id INTEGER REFERENCES sections(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  video_url TEXT,
+  position INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_lessons_section ON lessons(section_id);
+
+-- =====================
+-- ENROLLMENTS
+-- =====================
+CREATE TABLE enrollments (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'active',
+  source TEXT NOT NULL DEFAULT 'free',
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE(user_id, course_id)
+);
+
+-- =====================
+-- LESSON PROGRESS
+-- =====================
+CREATE TABLE lesson_progress (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+  completed BOOLEAN DEFAULT false,
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE(user_id, lesson_id)
+);
+
+CREATE INDEX idx_lesson_progress_user ON lesson_progress(user_id);
+CREATE INDEX idx_lesson_progress_lesson ON lesson_progress(lesson_id);
+
+-- =====================
+-- FAVORITES
+-- =====================
+CREATE TABLE favorites (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE (user_id, course_id)
 );
 
 -- =====================
@@ -98,45 +167,4 @@ CREATE TABLE document_audit (
   action VARCHAR(50) NOT NULL,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT now()
-);
-
--- =====================
--- FAVORITES
--- =====================
-CREATE TABLE favorites (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT now(),
-  UNIQUE (user_id, course_id)
-);
-
--- ==========================
--- COURSE PROGRESS
--- ==========================
-CREATE TABLE course_progress (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-  progress INTEGER DEFAULT 0,
-  last_position INTEGER DEFAULT 0,
-  completed BOOLEAN DEFAULT false,
-  updated_at TIMESTAMP DEFAULT now(),
-  UNIQUE (user_id, course_id)
-);
-
--- ==========================
--- ENROLLMENTS
--- ==========================
-CREATE TABLE enrollments (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-
-  status VARCHAR(20) NOT NULL DEFAULT 'active',
-  source VARCHAR(20) NOT NULL DEFAULT 'free',
-
-  created_at TIMESTAMP DEFAULT now(),
-
-  UNIQUE (user_id, course_id)
 );

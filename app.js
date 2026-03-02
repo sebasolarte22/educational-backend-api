@@ -33,6 +33,9 @@ app.use("/api/ai", require("./routers/ai.router"));
 app.use("/api/favorites", require("./routers/fav.router"));
 app.use("/api/progress", require("./routers/progress.router"));
 app.use("/api/enrollment", require("./routers/enrollment.router"));
+app.use("/api/sections", require("./routers/section.router"));
+app.use("/api/lessons", require("./routers/lesson.router"));
+
 // ==========================
 // ROOT
 // ==========================
