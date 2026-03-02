@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const request = require("supertest");
 const bcrypt = require("bcrypt");
 const app = require("../app");
@@ -18,10 +16,6 @@ describe("AUTH - Login", () => {
         "admin"
       ]
     );
-  });
-
-  afterAll(async () => {
-    await pool.end();
   });
 
   test("Valid login should return token", async () => {
@@ -45,7 +39,7 @@ describe("AUTH - Login", () => {
       });
 
     expect(res.statusCode).toBe(401);
-    expect(res.body.status).toBe("fail");
+      expect(res.body.status).toBe("fail");
   });
 
 });

@@ -125,3 +125,18 @@ CREATE TABLE course_progress (
   UNIQUE (user_id, course_id)
 );
 
+-- ==========================
+-- ENROLLMENTS
+-- ==========================
+CREATE TABLE enrollments (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  source VARCHAR(20) NOT NULL DEFAULT 'free',
+
+  created_at TIMESTAMP DEFAULT now(),
+
+  UNIQUE (user_id, course_id)
+);

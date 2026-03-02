@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const request = require("supertest");
 const app = require("../app");
 const pool = require("../config/db");
@@ -30,7 +28,6 @@ describe("POST /api/courses/auth/login", () => {
       "DELETE FROM users WHERE email = $1",
       [user.email]
     );
-    await pool.end();
   });
 
   test("Successful login should return token", async () => {

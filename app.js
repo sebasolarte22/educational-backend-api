@@ -32,6 +32,7 @@ app.use("/api/courses/auth", require("./routers/auth.router"));
 app.use("/api/ai", require("./routers/ai.router"));
 app.use("/api/favorites", require("./routers/fav.router"));
 app.use("/api/progress", require("./routers/progress.router"));
+app.use("/api/enrollment", require("./routers/enrollment.router"));
 // ==========================
 // ROOT
 // ==========================

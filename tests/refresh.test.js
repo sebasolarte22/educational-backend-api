@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const request = require("supertest");
 const bcrypt = require("bcrypt");
 const app = require("../app");
@@ -13,8 +11,8 @@ describe("AUTH — Refresh Tokens", () => {
   beforeAll(async () => {
     await pool.query(
       `INSERT INTO users (email, password_hash, role)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (email) DO NOTHING`,
+      VALUES ($1, $2, $3)
+      ON CONFLICT (email) DO NOTHING`,
       [
         "refresh@test.com",
         await bcrypt.hash("123456", 10),
@@ -28,8 +26,6 @@ describe("AUTH — Refresh Tokens", () => {
       "DELETE FROM users WHERE email = $1",
       ["refresh@test.com"]
     );
-
-    await pool.end();
   });
 
   test("Login stores refresh token and returns access token", async () => {
