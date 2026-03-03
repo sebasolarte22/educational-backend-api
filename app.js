@@ -5,9 +5,11 @@ const cookieParser = require("cookie-parser");
 const logger = require("./utils/logger");
 const errorHandler = require("./middlewares/errorHandler");
 const { connectRedis } = require("./infrastructure/redis/redisClient");
+const cors = require("cors");
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 

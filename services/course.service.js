@@ -9,7 +9,7 @@ const AppError = require("../utils/AppError");
 async function getCourses(params) {
   const { category, filters, sort, page, limit } = params;
 
-  const cacheKey = `courses:${category}:${JSON.stringify(filters)}:${sort}:${page}:${limit}`;
+  const cacheKey = `courses:${category || "all"}:${JSON.stringify(filters)}:${sort}:${page}:${limit}`;
   const cached = await cache.get(cacheKey);
 
   if (cached) return cached;
@@ -34,7 +34,7 @@ async function getCourseById({ id, category }) {
 // ==========================
 async function createCourse(data) {
   const course = await repository.createCourse(data);
-  await cache.delByPattern(`courses:${data.category}:*`);
+  await cache.delByPattern(`courses:*`);
   return course;
 }
 
@@ -44,13 +44,9 @@ async function createCourse(data) {
 async function updateCourse(params) {
   const course = await repository.updateCourse(params);
 
-  if (!course) {
-    throw new AppError("Course not found", 404);
-  }
+  if (!course) throw new AppError("Course not found", 404);
 
-  await cache.del(`course:${params.category}:${params.id}`);
-  await cache.delByPattern(`courses:${params.category}:*`);
-
+  await cache.delByPattern(`courses:*`);
   return course;
 }
 
@@ -60,13 +56,9 @@ async function updateCourse(params) {
 async function deleteCourse({ id, category }) {
   const course = await repository.deleteCourse(id, category);
 
-  if (!course) {
-    throw new AppError("Course not found", 404);
-  }
+  if (!course) throw new AppError("Course not found", 404);
 
-  await cache.del(`course:${category}:${id}`);
-  await cache.delByPattern(`courses:${category}:*`);
-
+  await cache.delByPattern(`courses:*`);
   return course;
 }
 

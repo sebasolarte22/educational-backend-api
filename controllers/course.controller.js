@@ -3,9 +3,25 @@ const AppError = require("../utils/AppError");
 const courseService = require("../services/course.service");
 
 // ==========================
+// GET ALL COURSES
+// ==========================
+const getAllCourses = asyncHandler(async (req, res) => {
+  const { sort, page, limit } = req.query;
+
+  const courses = await courseService.getCourses({
+    category: null,
+    filters: {},
+    sort,
+    page: page ? parseInt(page) : 1,
+    limit: limit ? parseInt(limit) : 20
+  });
+
+  res.json(courses);
+});
+
+// ==========================
 // PROGRAMMING
 // ==========================
-
 const getProgramming = asyncHandler(async (req, res) => {
   const { language, level, sort, page, limit } = req.query;
 
@@ -14,7 +30,7 @@ const getProgramming = asyncHandler(async (req, res) => {
     filters: { language, level },
     sort,
     page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 5
+    limit: limit ? parseInt(limit) : 10
   });
 
   res.json(courses);
@@ -26,7 +42,9 @@ const getProgrammingById = asyncHandler(async (req, res) => {
     category: "programming"
   });
 
-  if (!course) throw new AppError("Course not found", 404);
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
 
   res.json(course);
 });
@@ -63,7 +81,6 @@ const deleteProgramming = asyncHandler(async (req, res) => {
 // ==========================
 // MATHEMATICS
 // ==========================
-
 const getMathematics = asyncHandler(async (req, res) => {
   const { subject, level, sort, page, limit } = req.query;
 
@@ -72,7 +89,7 @@ const getMathematics = asyncHandler(async (req, res) => {
     filters: { subject, level },
     sort,
     page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 5
+    limit: limit ? parseInt(limit) : 10
   });
 
   res.json(courses);
@@ -84,7 +101,9 @@ const getMathematicsById = asyncHandler(async (req, res) => {
     category: "mathematics"
   });
 
-  if (!course) throw new AppError("Course not found", 404);
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
 
   res.json(course);
 });
@@ -119,19 +138,22 @@ const deleteMathematics = asyncHandler(async (req, res) => {
 });
 
 // ==========================
-// FULL STRUCTURE
+// FULL STRUCTURE + PROGRESS
 // ==========================
 const getCourseFull = asyncHandler(async (req, res) => {
   const course = await courseService.getCourseFull(
     req.params.id,
     req.user ? req.user.id : null
   );
+
   res.json(course);
 });
 
-
-
+// ==========================
+// EXPORTS
+// ==========================
 module.exports = {
+  getAllCourses,
   getProgramming,
   getProgrammingById,
   createProgramming,
