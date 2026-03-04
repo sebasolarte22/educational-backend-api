@@ -14,8 +14,9 @@ app.use(
     origin: [
       "http://127.0.0.1:4173",
       "http://localhost:4173",
-      "https://TU-SITIO.netlify.app"
+      "https://lms-api-dashboard.netlify.app"
     ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
