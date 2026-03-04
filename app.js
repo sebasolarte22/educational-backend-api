@@ -9,7 +9,16 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://127.0.0.1:4173",
+      "http://localhost:4173",
+      "https://TU-SITIO.netlify.app"
+    ],
+    credentials: true
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 

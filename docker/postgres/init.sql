@@ -9,9 +9,7 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- =====================
--- REFRESH TOKENS
--- =====================
+
 CREATE TABLE refresh_tokens (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
