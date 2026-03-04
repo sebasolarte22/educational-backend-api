@@ -1,13 +1,28 @@
-[Node] [Docker] [PostgreSQL] [Redis] [Render]
+![Dashboard](assets/dashboard.png)
+
 # Educational LMS API
 
-![Dashboard](assets/dashboard.png)
+![Node](https://img.shields.io/badge/node.js-20-green)
+![Express](https://img.shields.io/badge/express-backend-black)
+![PostgreSQL](https://img.shields.io/badge/postgresql-database-blue)
+![Redis](https://img.shields.io/badge/redis-cache-red)
+![Docker](https://img.shields.io/badge/docker-containerized-blue)
+![Render](https://img.shields.io/badge/render-deployed-purple)
+![Netlify](https://img.shields.io/badge/netlify-frontend-success)
 
 Production-ready **REST API for an educational learning platform** built with **Node.js, Express, PostgreSQL, Redis and Docker** following a clean architecture approach.
 
-This project demonstrates modern backend engineering practices including **JWT authentication with refresh token rotation, Redis caching, role-based authorization, structured logging, Dockerized infrastructure, and integration testing**.
+This project demonstrates modern backend engineering practices including:
 
-The API is fully deployed and connected to a **frontend dashboard that allows testing the endpoints directly from the browser**.
+* JWT authentication with refresh token rotation
+* Redis caching strategies
+* Role-based authorization
+* Structured logging
+* Dockerized infrastructure
+* Integration testing with database isolation
+* Cloud deployment
+
+The backend is fully deployed and connected to a **frontend dashboard that allows testing the API directly from the browser**.
 
 ---
 
@@ -31,25 +46,24 @@ GET /
 
 # 🖼 Dashboard Preview
 
-# Dashboard Preview
-
 This dashboard allows testing the full backend API directly from the browser.
 
-| Login | Dashboard |
-|------|------|
+| Login                      | Dashboard                          |
+| -------------------------- | ---------------------------------- |
 | ![Login](assets/login.png) | ![Dashboard](assets/dashboard.png) |
 
-| Course List | Course Enrollment |
-|------|------|
+| Course List                            | Course Enrollment                           |
+| -------------------------------------- | ------------------------------------------- |
 | ![Course List](assets/course-list.png) | ![Enrollment](assets/course-enrollment.png) |
 
-| Course Progress | Course CRUD |
-|------|------|
+| Course Progress                         | Course CRUD                            |
+| --------------------------------------- | -------------------------------------- |
 | ![Progress](assets/course-progress.png) | ![Course CRUD](assets/course-crud.png) |
 
 ### API Response Viewer
 
 ![API Response](assets/api-response.png)
+
 ---
 
 # 🏗 System Architecture
@@ -133,7 +147,7 @@ Cached resources
 Invalidation strategy
 
 * Cache cleared after course mutations
-* Pattern-based invalidation
+* Pattern-based cache invalidation
 
 Benefits
 
@@ -163,7 +177,9 @@ Benefits
 
 # 🐳 Docker Setup
 
-The application runs using **Docker Compose** with three services:
+The application runs using **Docker Compose**.
+
+Services:
 
 * Backend API
 * PostgreSQL database
@@ -291,19 +307,34 @@ Testing tools
 
 ---
 
-# 🧠 What This Project Demonstrates
+# 🧠 Why This Project Matters
 
-This project showcases **real-world backend engineering practices**:
+This project demonstrates **real backend engineering practices used in production systems**:
 
-* Secure authentication with refresh token rotation
-* Clean architecture design
-* Redis caching strategy
-* Cache invalidation strategies
-* Dockerized backend infrastructure
-* Structured logging
-* Integration testing with DB isolation
+* Secure authentication strategies
+* Token rotation
+* Cache-aside architecture
+* Database + caching layers
+* Dockerized infrastructure
 * Cloud deployment
-* API testing dashboard
+* Integration testing
+* Clean architecture design
+
+It simulates the backend architecture of a **real educational platform**.
+
+---
+
+# ⚙ Production Considerations
+
+In a production environment this system could be extended with:
+
+* Kubernetes orchestration
+* CI/CD pipelines
+* distributed caching
+* monitoring (Prometheus / Grafana)
+* API documentation (OpenAPI / Swagger)
+* rate limiting with Redis
+* background workers
 
 ---
 
